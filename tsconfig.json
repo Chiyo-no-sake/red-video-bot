@@ -1,0 +1,23 @@
+{
+  "extends": "@tsconfig/node12/tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "noImplicitAny": true,
+    "removeComments": true,
+    "preserveConstEnums": true,
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "types": []
+  },
+  "include": [
+      "src/**/*"
+  ],
+  "exclude": [
+      "**/*.spec.ts",
+      "./node_modules"
+  ],
+  "buildOptions": {
+    "outDir": "dist/src",
+  },
+}
