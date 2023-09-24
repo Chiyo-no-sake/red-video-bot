@@ -1,0 +1,18 @@
+version: '2.1'
+
+services:
+  bot:
+    image: bot
+    build: .
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - TG_API_ID=${TG_API_ID}
+      - TG_API_HASH=${TG_API_HASH}
+      - PHONE=${PHONE}
+      - VIDEO_DIR=/video
+      - CONFIG_DIR=/config
+    volumes:
+      - ./data/config:/config
+      - /mnt/hdd/plex/tv/one_piece:/video
+
+    restart: always

@@ -6,18 +6,16 @@ ENV TG_API_ID=x
 ENV TG_API_HASH=x
 ENV BOT_TOKEN=x
 ENV PHONE=x
+ENV VIDEO_DIR=x
+ENV CONFIG_DIR=x
 
 # Create app directory
 WORKDIR /usr/src/app
 
-# Install app dependencies
-COPY package*.json ./
-
-RUN npm install
-RUN npm run build
-
 # Bundle app source
 COPY . .
 
+RUN npm install
+
 # Run the script
-CMD [ "node", "dist/src/index.js" ]
+CMD [ "npm", "start" ]
