@@ -86,6 +86,7 @@ export const startBot = async (
           }
 
           lastSentProgress = progress
+          lastMsg = fileStatus
         }
       }
     )
