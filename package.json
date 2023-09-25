@@ -25,9 +25,9 @@
     "typescript": "^5.2.2"
   },
   "scripts": {
-    "start": "tsc --outDir dist/src && copyfiles src/res/**/* dist && node dist/src/index.js",
-    "auth": "tsc --outDir dist/src && copyfiles src/res/**/* dist && node dist/src/authInit.js",
-    "build": "tsc --outDir dist/src && copyfiles src/res/**/* dist",
+    "start": "tsc --outDir dist/src && copyfiles \"src/res/**/*\" dist && node dist/src/index.js",
+    "auth": "tsc --outDir dist/src && copyfiles \"src/res/**/*\" dist && node dist/src/authInit.js",
+    "build": "tsc --outDir dist/src && copyfiles \"src/res/**/*\" dist",
     "lint": "eslint . --ext .ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
