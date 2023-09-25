@@ -6,7 +6,9 @@ const main = async () => {
     dotenv.config();
 
     const configParser = new ConfigParser(process.env);
-    const config = configParser.parseConfig();
+
+    const {sessionString: _, ...config} = configParser.parseConfig();
+    
 
     const telegram = new TelegramService({
         ...config,
@@ -15,7 +17,8 @@ const main = async () => {
 
     console.log("Starting with configuration:", config)
     console.log("Initializing session...")
-    await telegram.initializeSession(config.phone);
+
+    await telegram.start();
     console.log("Session initialized.")
 };
 

@@ -9,6 +9,7 @@ export class ConfigParser {
                 botToken: this.env.BOT_TOKEN,
                 apiHash: this.env.TG_API_HASH,
                 apiId: Number(this.env.TG_API_ID),
+                sessionString: this.env.SESSION_STRING,
             },
             videoDir: this.env.VIDEO_DIR,
             configDir: this.env.CONFIG_DIR,

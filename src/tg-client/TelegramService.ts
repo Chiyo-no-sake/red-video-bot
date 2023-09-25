@@ -12,9 +12,11 @@ export default class TelegramService {
     private client: TelegramClient;
     private session: StringSession;
     private rl: any;
+    private sessionString: string;
 
-    constructor(private readonly config: TelegramServiceConfig, private sessionString?: string) {
-        this.session = new StringSession();
+    constructor(private readonly config: TelegramServiceConfig) {
+        this.sessionString = config.sessionString;
+        this.session = new StringSession(this.sessionString);
         this.rl = createInterface({ input: stdin, output: stdout })
 
         this.client = new TelegramClient(
@@ -25,14 +27,15 @@ export default class TelegramService {
         );
     }
 
-    async start(phone?: string) {
+    async start() {
         await this.client.start({
-            phoneNumber: async () => phone || await this.rl.question('Insert phone number: '),
+            phoneNumber: async () => this.config.phone || await this.rl.question('Insert phone number: '),
             phoneCode: async () => await this.rl.question('Insert received phone code: '),
             onError: (err) => console.log(err),
         })
 
         this.sessionString = this.session.save();
+	console.log(this.sessionString);
     }
 
     async downloadMediaFromMessage(mediaData: { chatId?: string | EntityLike, msgId: number}, onDownloadProgress?: (progress: BigInteger, total: BigInteger) => void) {

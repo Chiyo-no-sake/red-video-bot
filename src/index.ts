@@ -6,7 +6,6 @@ import { startBot } from './bot/Bot.js';
 const main = async () => {
     dotenv.config();
 
-
     const configParser = new ConfigParser(process.env);
     const config = configParser.parseConfig();
     
@@ -17,7 +16,7 @@ const main = async () => {
     });
 
 
-    await telegram.restoreSession(config.phone);
+    await telegram.start();
     console.log("Session restored.")
 
     await startBot(config, telegram)
