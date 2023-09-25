@@ -7,12 +7,13 @@ const main = async () => {
 
     const configParser = new ConfigParser(process.env);
 
-    const {sessionString: _, ...config} = configParser.parseConfig();
-    
+    const config = configParser.parseConfig();
+
+    const {sessionString , ...auth} = config.auth;
 
     const telegram = new TelegramService({
         ...config,
-        ...config.auth,
+        ...auth,
     });
 
     console.log("Starting with configuration:", config)
