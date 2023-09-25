@@ -6,18 +6,14 @@ import { stdin, stdout } from 'process'
 import { BigInteger } from "big-integer";
 import { delay } from "../utils.js";
 import { EntityLike } from "telegram/define.js";
-import { readFileSync, writeFileSync  } from "fs";
-import path from "path";
+
 
 export default class TelegramService {
-    private client: TelegramClient | undefined;
-    rl: any;
-    private session: StringSession| undefined;
+    private client: TelegramClient;
+    private session: StringSession;
+    private rl: any;
 
-    constructor(private readonly config: TelegramServiceConfig) {
-    }
-
-    async initializeSession(phone?: string) {
+    constructor(private readonly config: TelegramServiceConfig, private sessionString?: string) {
         this.session = new StringSession();
         this.rl = createInterface({ input: stdin, output: stdout })
 
@@ -27,52 +23,17 @@ export default class TelegramService {
             this.config.apiHash,
             { connectionRetries: 5 }
         );
+    }
 
+    async start(phone?: string) {
         await this.client.start({
             phoneNumber: async () => phone || await this.rl.question('Insert phone number: '),
             phoneCode: async () => await this.rl.question('Insert received phone code: '),
             onError: (err) => console.log(err),
         })
 
-        const str = this.session.save()
-        
-        // write string to file
-        const targetPath = path.join(this.config.configDir, "session.txt")
-        writeFileSync(targetPath, str)
+        this.sessionString = this.session.save();
     }
-
-    async restoreSession(phone?: string) {
-        const targetPath = path.join(this.config.configDir, "session.txt")
-        const str = readFileSync(targetPath, 'utf-8')
-
-        this.session = new StringSession(str);
-        this.rl = createInterface({ input: stdin, output: stdout })
-
-        this.client = new TelegramClient(
-            this.session,
-            this.config.apiId,
-            this.config.apiHash,
-            { connectionRetries: 5 }
-        );
-
-        await this.client.start({
-            phoneCode: async () => {
-                throw new Error("Session not found.");
-            },
-            phoneNumber: async () => {
-                if (phone) return phone;
-                throw new Error("Session not found.");
-            },
-            onError: (err) => console.log(err),
-        })
-
-        console.log("Session restored.")
-        const sstr = this.session.save()
-
-        // write string to file
-        writeFileSync(targetPath, sstr)
-    }
-
 
     async downloadMediaFromMessage(mediaData: { chatId?: string | EntityLike, msgId: number}, onDownloadProgress?: (progress: BigInteger, total: BigInteger) => void) {
         const msgId = mediaData.msgId

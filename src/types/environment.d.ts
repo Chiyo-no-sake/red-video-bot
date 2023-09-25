@@ -6,6 +6,7 @@ declare global {
             BOT_TOKEN: string;
             TG_API_ID: string;
             TG_API_HASH: string;
+            SESSION_STRING: string;
             PHONE: string;
             VIDEO_DIR: string;
             CONFIG_DIR: string;

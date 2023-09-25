@@ -11,6 +11,7 @@ services:
       - PHONE=${PHONE}
       - VIDEO_DIR=/video
       - CONFIG_DIR=/config
+      - SESSION_STRING=${SESSION_STRING}
     volumes:
       - ./data/config:/config
       - /mnt/hdd/plex/tv/one_piece:/video
