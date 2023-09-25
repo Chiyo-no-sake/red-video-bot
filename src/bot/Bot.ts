@@ -42,7 +42,7 @@ export const startBot = async (
     let lastSentProgress = bigInt.zero
 
     let chatId
-    if (ctx.message.forward_from_chat) {
+    if (ctx.message.forward_from_message_id) {
       if (ctx.message.forward_from_chat.type === 'group') {
         chatId = ctx.message.forward_from_chat.title
       } else {

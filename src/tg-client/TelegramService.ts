@@ -48,7 +48,7 @@ export default class TelegramService {
 
         if (!message || message?.length === 0) {
             throw new Error("Message not found.")
-        }
+        } 
 
         if ((!message[0].media as any)?.document) {
             throw new Error("Message is not a video.")
