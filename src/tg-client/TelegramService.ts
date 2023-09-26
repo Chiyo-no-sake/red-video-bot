@@ -58,7 +58,7 @@ export default class TelegramService {
         console.log("Downloading video...")
         return {
             fileName: (!message.media as any)?.document?.file_name || "video.mp4",
-            mimeType: (!message.media as any)?.document?.mime_type || "mp4",
+            mimeType: (!message.media as any)?.document?.mime_type || "video/mp4",
             buffer: await this.client?.downloadMedia(message, {
             progressCallback: onDownloadProgress
         })}
