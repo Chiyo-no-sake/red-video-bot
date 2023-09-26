@@ -15,15 +15,14 @@ export class OpenAIGenerator {
 
   async generateName(ctxJson: string): Promise<string> {
     let name: string | boolean = false;
-    return "tmp"
 
     while (!name) {
-      // console.log("Generating name...")
-      // const response = await this.generateNameOnce(ctxJson);
-      // name = await this.confirmName(response);
+      console.log("Generating name...")
+      const response = await this.generateNameOnce(ctxJson);
+      name = await this.confirmName(response);
 
-      // console.log("Generated response:", response, "name (found):", name);
-      // if (name) return name;
+      console.log("Generated response:", response, "name (found):", name);
+      if (name) return name;
     }
   }
 
