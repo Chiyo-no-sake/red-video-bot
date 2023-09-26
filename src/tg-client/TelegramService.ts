@@ -38,27 +38,28 @@ export default class TelegramService {
 	console.log(this.sessionString);
     }
 
-    async downloadMediaFromMessage(mediaData: { chatId?: string | EntityLike, msgId: number}, onDownloadProgress?: (progress: BigInteger, total: BigInteger) => void) {
-        const msgId = mediaData.msgId
-        const message = await this.client?.getMessages(mediaData.chatId || "me", {
-            ids: [msgId]
-        })
+    async downloadMediaFromMessage(mediaData: { chatName?: string, msgId: number}, onDownloadProgress?: (progress: BigInteger, total: BigInteger) => void) {
+        const entity = await this.client.getEntity(mediaData.chatName)
+        const messages = (await this.client?.getMessages(entity));
+        const message = messages.sort((a, b) => {
+            return a.id > b.id ? 1 : -1
+        }).at(messages.total-2)
 
-        await delay(1000)
+        await delay(500)
 
-        if (!message || message?.length === 0) {
+        if (!message) {
             throw new Error("Message not found.")
         } 
 
-        if ((!message[0].media as any)?.document) {
+        if ((!message.media as any)?.document) {
             throw new Error("Message is not a video.")
         }
 
         console.log("Downloading video...")
         return {
-            fileName: (!message[0]?.media as any)?.document?.file_name || "video.mp4",
-            mimeType: (!message[0]?.media as any)?.document?.mime_type || "mp4",
-            buffer: await this.client?.downloadMedia(message[0], {
+            fileName: (!message.media as any)?.document?.file_name || "video.mp4",
+            mimeType: (!message.media as any)?.document?.mime_type || "mp4",
+            buffer: await this.client?.downloadMedia(message, {
             progressCallback: onDownloadProgress
         })}
     }

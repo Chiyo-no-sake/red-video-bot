@@ -7,6 +7,7 @@ import bigInt from 'big-integer'
 import EjsEngine from '../template/mustacheEngine.js'
 import { OpenAIGenerator } from '../name-generator/OpenAIGenerator.js'
 import mime from 'mime-types'
+import { Chat } from 'grammy/types'
 
 
 export const startBot = async (
@@ -42,21 +43,26 @@ export const startBot = async (
     let percentMessageId: number | undefined = undefined
     let lastSentProgress = bigInt.zero
 
-    let chatId
+    let chatName
     if (ctx.message.forward_from_message_id) {
       if (ctx.message.forward_from_chat.type === 'group') {
-        chatId = ctx.message.forward_from_chat.title
+        chatName = ctx.message.forward_from_chat.title
       } else {
-        chatId = ctx.message.forward_from_chat.username || ctx.message.chat.id
+        chatName = ctx.message.forward_from_chat.username || ((ctx.message.chat as Chat.GroupChat).title || (ctx.message.chat as Chat.PrivateChat).username)
       }
     } else {
-      chatId = ctx.message.chat.id
+      chatName = (ctx.message.chat as Chat.GroupChat).title || (ctx.message.chat as Chat.PrivateChat).username
     }
 
+    
+
+    if(chatName == ctx.message.from.username)
+      chatName = 'RedVideoDL_bot'
+
     let lastMsg = ''
-    const { buffer, fileName: addFileName, mimeType } = await tg.downloadMediaFromMessage(
+    const { buffer, fileName: _, mimeType } = await tg.downloadMediaFromMessage(
       {
-        chatId,
+        chatName: chatName,
         msgId: messageId,
       },
       async (progress, total) => {
