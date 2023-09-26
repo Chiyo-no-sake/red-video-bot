@@ -2,6 +2,7 @@ import * as dotenv from 'dotenv';
 import { ConfigParser } from './config/ConfigParser.js';
 import TelegramService from './tg-client/TelegramService.js';
 import { startBot } from './bot/Bot.js';
+import { OpenAIGenerator } from './name-generator/OpenAIGenerator.js';
 
 const main = async () => {
     dotenv.config();
@@ -19,7 +20,9 @@ const main = async () => {
     await telegram.start();
     console.log("Session restored.")
 
-    await startBot(config, telegram)
+    const nameGenerator = new OpenAIGenerator(config.openai);
+
+    await startBot(config, telegram, nameGenerator)
     console.log("Bot started.")
 }
 

@@ -5,10 +5,14 @@ import fs from 'fs'
 import prettyBytes from 'pretty-bytes'
 import bigInt from 'big-integer'
 import EjsEngine from '../template/mustacheEngine.js'
+import { OpenAIGenerator } from '../name-generator/OpenAIGenerator.js'
+import mime from 'mime-types'
+
 
 export const startBot = async (
   config: RedVideoBotConfig,
-  tg: TelegramService
+  tg: TelegramService,
+  nameGenerator: OpenAIGenerator
 ) => {
   const bot = new Bot(config.auth.botToken)
   const templateEngine = new EjsEngine();
@@ -18,15 +22,12 @@ export const startBot = async (
   bot.on('message:video', async (ctx) => {
     if (!ctx.message.video.file_id) return ctx.reply('No file id found!')
 
-    const messageId =
-      ctx.message.forward_from_message_id || ctx.message.message_id
-    const fileName =
-      ctx.message?.video.file_name ||
-      ctx.message.caption ||
-      ctx.message.message_id.toString()
-    const fileSize = prettyBytes(ctx.message.video.file_size!)
+    const messageId = ctx.message.forward_from_message_id || ctx.message.message_id
 
-    // Display informations about the video in markdown v2
+    const fileSize = prettyBytes(ctx.message.video.file_size!)
+    const fileName = await nameGenerator.generateName(JSON.stringify(ctx.message, null, 2))
+
+    // render info message
     const videoInfo = templateEngine.renderVideoInfo({
       fileName,
       fileSize,
@@ -53,7 +54,7 @@ export const startBot = async (
     }
 
     let lastMsg = ''
-    const { buffer, fileName: addFileName } = await tg.downloadMediaFromMessage(
+    const { buffer, fileName: addFileName, mimeType } = await tg.downloadMediaFromMessage(
       {
         chatId,
         msgId: messageId,
@@ -64,7 +65,7 @@ export const startBot = async (
           .divide(total)
           .toJSNumber()
         const elapsedSeconds = (Date.now() - start) / 1000
-        const speed = prettyBytes(progress.toJSNumber() / elapsedSeconds)
+        const speed = prettyBytes(progress.toJSNumber() / elapsedSeconds) + '/s'
 
         if (progress.compare(lastSentProgress) !== 0) {
           const fileStatus = templateEngine.renderProgressInfo({
@@ -91,15 +92,30 @@ export const startBot = async (
       }
     )
 
-    // Save the video to disk at configured videos dir
+    await ctx.api.editMessageText(
+      ctx.chat.id,
+      percentMessageId!,
+      templateEngine.renderProgressInfo({
+        progressPercentage: 100,
+        progress: prettyBytes(lastSentProgress.toJSNumber()),
+        total: prettyBytes(lastSentProgress.toJSNumber()),
+        speed: prettyBytes(0) + '/s',
+      }),
+      { parse_mode: 'HTML' }
+    )
+
+    const extension = mime.extension(mimeType)
+    const finalName = `${fileName}.${extension}`
+
+    ctx.reply(`Saving video to ${config.videoDir + '/' + (finalName)}`)
     const writeStream = fs.createWriteStream(
-      config.videoDir + '/' + (fileName || addFileName)
+      config.videoDir + '/' + (fileName)
     )
     writeStream.write(buffer)
     writeStream.on('finish', () => {
       console.log('wrote all data to file')
       ctx.reply(
-        `Video saved to ${config.videoDir + '/' + (fileName || addFileName)}`
+        `Video saved`
       )
     })
     writeStream.end()
