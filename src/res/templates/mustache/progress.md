@@ -9,6 +9,8 @@
 
   - 🚀 <b>Speed:</b> <%= speed %>
 
+  - 🕒 <b>Time Left:</b> <%= timeLeft %>
+
 <% 
 let filledBalls = Math.floor(progressPercentage / 10);
 let emptyBalls = 10 - filledBalls;

@@ -12,6 +12,7 @@ export interface ProgressInfo {
   progress: string
   total: string
   speed: string
+  timeLeft: string
 }
 
 export interface Engine {

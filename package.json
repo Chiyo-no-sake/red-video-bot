@@ -13,6 +13,8 @@
     "mime-types": "^2.1.35",
     "openai": "^4.10.0",
     "pretty-bytes": "^6.1.1",
+    "pretty-ms": "^8.0.0",
+    "rxjs": "^7.8.1",
     "telegram": "^2.18.38"
   },
   "devDependencies": {

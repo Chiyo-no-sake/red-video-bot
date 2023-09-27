@@ -3,6 +3,7 @@ import TelegramService from '../tg-client/TelegramService.js'
 import { RedVideoBotConfig } from '../config/Config.js'
 import fs from 'fs'
 import prettyBytes from 'pretty-bytes'
+import prettyMilliseconds from 'pretty-ms'
 import bigInt from 'big-integer'
 import EjsEngine from '../template/mustacheEngine.js'
 import { OpenAIGenerator } from '../name-generator/OpenAIGenerator.js'
@@ -63,6 +64,7 @@ export const startBot = async (
         chatName = 'RedVideoDL_bot'
 
       let lastMsg = ''
+      let lastSentTime = Date.now()
       const { buffer, fileName: _, mimeType } = await tg.downloadMediaFromMessage(
         {
           chatName: chatName,
@@ -75,12 +77,16 @@ export const startBot = async (
             .toJSNumber()
           const elapsedSeconds = (Date.now() - start) / 1000
           const speed = prettyBytes(progress.toJSNumber() / elapsedSeconds) + '/s'
+          const remainingMs = (total.toJSNumber() - progress.toJSNumber()) / (progress.toJSNumber() / elapsedSeconds) * 1000
+          const remainingSeconds = remainingMs === Infinity ? '∞' : prettyMilliseconds(remainingMs)
 
-          if (progress.compare(lastSentProgress) !== 0) {
+          if (progress.compare(lastSentProgress) !== 0 && lastSentTime + 2000 < Date.now()) {
+            lastSentTime = Date.now()
             const fileStatus = templateEngine.renderProgressInfo({
               progressPercentage,
               progress: prettyBytes(progress.toJSNumber()),
               total: prettyBytes(total.toJSNumber()),
+              timeLeft: remainingSeconds,
               speed,
             })
 
@@ -108,7 +114,8 @@ export const startBot = async (
           progressPercentage: 100,
           progress: prettyBytes(lastSentProgress.toJSNumber()),
           total: prettyBytes(lastSentProgress.toJSNumber()),
-          speed: prettyBytes(0) + '/s',
+          speed: prettyBytes(0) + '/s', 
+          timeLeft: prettyMilliseconds(0)
         }),
         { parse_mode: 'HTML' }
       )
