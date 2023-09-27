@@ -46,11 +46,11 @@ export const startBot = async (
       let lastSentProgress = bigInt.zero
 
       let chatName
-      if (ctx.message.forward_from_message_id) {
+      if (ctx.message.forward_from_chat) {
         if (ctx.message.forward_from_chat.type === 'group') {
           chatName = ctx.message.forward_from_chat.title
         } else {
-          chatName = ctx.message.forward_from_chat.username || ((ctx.message.chat as Chat.GroupChat).title || (ctx.message.chat as Chat.PrivateChat).username)
+          chatName = ctx.message.forward_from_chat.username
         }
       } else {
         chatName = (ctx.message.chat as Chat.GroupChat).title || (ctx.message.chat as Chat.PrivateChat).username
@@ -58,6 +58,7 @@ export const startBot = async (
 
       
 
+      // if the chat of the message is the user for the TelegramService, we need to change it to the bot
       if(chatName == ctx.message.from.username)
         chatName = 'RedVideoDL_bot'
 
