@@ -30,7 +30,7 @@ export class OpenAIGenerator {
     const completion = await this.openAI.chat.completions.create({
       messages: [
         {role: 'user', content: "The following is an example of a \"ctx\" object from my telegram bot:\n" + ctxJson + "\n\n"+ 
-        "Generate a file name based on that for a tv series episode with the following format (without quotes): \"One_Piece_<EPISODE_NUMBER>\". Example of your answer: \"One_Piece_001\""},
+        "Generate a file name based on that for a tv series episode with the following format (without quotes): \"One_Piece_<EPISODE_NUMBER>\". Write a short answer. Example of your answer: \"One_Piece_001\""},
       ],
       model: this.config.engine,
     });
