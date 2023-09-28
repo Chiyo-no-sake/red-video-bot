@@ -17,9 +17,9 @@ services:
     volumes:
       - ./data/config:/config
       - type: bind
-        source: /mnt/hdd/plex/tv/one_piece
-        target: /video
-        bind:
+      - source: /mnt/hdd/plex/tv
+      - target: /video
+      - bind:
           propagation: shared
 
     restart: always
