@@ -9,7 +9,7 @@ services:
       - TG_API_ID=${TG_API_ID}
       - TG_API_HASH=${TG_API_HASH}
       - PHONE=${PHONE}
-      - VIDEO_DIR=/video
+      - VIDEO_DIR=/video/one_piece
       - CONFIG_DIR=/config
       - SESSION_STRING=${SESSION_STRING}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -17,9 +17,9 @@ services:
     volumes:
       - ./data/config:/config
       - type: bind
-      - source: /mnt/hdd/plex/tv
-      - target: /video
-      - bind:
+        source: /mnt/hdd/plex/tv
+        target: /video
+        bind:
           propagation: shared
 
     restart: always
