@@ -123,9 +123,9 @@ export const startBot = async (
       const extension = mime.extension(mimeType)
       const finalName = `${fileName}.${extension}`
 
-      ctx.reply(`Saving video to ${config.videoDir + '/' + (finalName)}`)
+      ctx.reply(`Saving video to ${config.videoDir}/${finalName}`)
       const writeStream = fs.createWriteStream(
-        config.videoDir + '/one_piece/' + (fileName)
+        config.videoDir + '/one_piece/' + finalName
       )
       writeStream.write(buffer)
       writeStream.on('finish', () => {
