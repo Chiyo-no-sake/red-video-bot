@@ -125,7 +125,7 @@ export const startBot = async (
 
       ctx.reply(`Saving video to ${config.videoDir}/${finalName}`)
       const writeStream = fs.createWriteStream(
-        config.videoDir + finalName
+        config.videoDir + '/' + finalName
       )
       writeStream.write(buffer)
       writeStream.on('finish', () => {
