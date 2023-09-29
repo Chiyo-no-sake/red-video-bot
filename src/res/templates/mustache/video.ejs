@@ -5,9 +5,10 @@
 
  - 🎬 <b>Type:</b> <%= isSeries ? "TV Series" : "Movie" %>
 
-<%= isSeries && " - 💾 <b>Series Name:</b> " + seriesName 
+<% if(isSeries) { %>
+ - 💾 <b>Series Name:</b> <%= seriesName %>
 
-%>
+<% } %>
  - 💾 <b>Size:</b> <%= fileSize %>
 
  - ⏱️ <b>Duration:</b> <%= duration %>
