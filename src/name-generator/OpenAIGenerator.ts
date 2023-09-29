@@ -1,4 +1,8 @@
 import OpenAI from "openai";
+import { Engine } from "../template/engine";
+import { readFile, readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import path from "path";
 
 
 export type OpenAIConfig = {
@@ -7,30 +11,63 @@ export type OpenAIConfig = {
 };
 
 export class OpenAIGenerator {
-
   private readonly openAI = new OpenAI({ apiKey: this.config.apiKey });
 
-  constructor(private readonly config: OpenAIConfig) {}
+  constructor(private readonly config: OpenAIConfig, private readonly engine: Engine) {}
 
+  async generateName(ctxJson: string, currentSeries: string[]): Promise<{ seriesName?: string, videoName: string }> {
+    let info: {
+      seriesName?: string,
+      videoName: string
+    } | boolean = false;
 
-  async generateName(ctxJson: string): Promise<string> {
-    let name: string | boolean = false;
+    while (!info) {
+      console.log("Generating info...")
+      const response = await this.generatePrediction(ctxJson, currentSeries);
+      info = await this.validateResponse(response);
 
-    while (!name) {
-      console.log("Generating name...")
-      const response = await this.generateNameOnce(ctxJson);
-      name = await this.confirmName(response);
-
-      console.log("Generated response:", response, "name (found):", name);
-      if (name) return name;
+      console.log("Generated response:", response, "info (found?):", info);
+      if (info) return info;
     }
   }
 
-  private async generateNameOnce(ctxJson: string): Promise<string> {
+  private async generatePrediction(ctxJson: string, currentSeriesNames: string[]): Promise<string> {
+    const p = fileURLToPath(import.meta.url)
+    const __dirname = path.dirname(p)
+    
+    const exampleCtx = readFileSync(__dirname + '/../res/openai_example_ctx.txt').toString()
+    const exampleSeriesNames1 = readFileSync(__dirname + '/../res/openai_example_series_1.txt').toString()
+    const exampleSeriesNames2 = readFileSync(__dirname + '/../res/openai_example_series_2.txt').toString()
+
+    const exampleResponse1 = readFileSync(__dirname + '/../res/openai_example_bot_response_1.txt').toString() 
+    const exampleResponse2 = readFileSync(__dirname + '/../res/openai_example_bot_response_2.txt').toString()
+
+    const examplePrompt1 = this.engine.renderOpenAIPrompt({ctxJson: exampleCtx, seriesNames: exampleSeriesNames1})
+    const examplePrompt2 = this.engine.renderOpenAIPrompt({ctxJson: exampleCtx, seriesNames: exampleSeriesNames2})
+    const prompt = this.engine.renderOpenAIPrompt({ctxJson, seriesNames: JSON.stringify(currentSeriesNames)})
+
     const completion = await this.openAI.chat.completions.create({
       messages: [
-        {role: 'user', content: "The following is an example of a \"ctx\" object from my telegram bot:\n" + ctxJson + "\n\n"+ 
-        "Generate a file name based on that for a tv series episode with the following format (without quotes): \"One_Piece_<EPISODE_NUMBER>\". Write a short answer. Example of your answer: \"One_Piece_001\""},
+        { 
+          role: 'user', 
+          content: examplePrompt1
+        },
+        {
+          role: 'assistant',
+          content: exampleResponse1
+        },
+        {
+          role: 'user',
+          content: examplePrompt2
+        },
+        {
+          role: 'assistant',
+          content: exampleResponse2
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
       ],
       model: this.config.engine,
     });
@@ -38,11 +75,31 @@ export class OpenAIGenerator {
     return completion.choices[0].message.content;
   }
 
-  private async confirmName(name: string): Promise<string | false> {
-    const regex = /One_Piece_\d{1,4}/;
-    const matches = name.match(regex);
-    if (matches === null) return false;
+  private async validateResponse(response: string): Promise<{
+    seriesName?: string,
+    videoName: string
+  }> {
+    const seriesNameRegex = /SERIES_NAME: "?\w+"?/;
+    const videoSeriesNameRegex = /TITLE: "?\w+\d{1,4}"?/;
+    const movieNameRegex = /TITLE: "?\w+"?/;
+    
+    const seriesNameMatches = response.match(seriesNameRegex);
+    const videoSeriesNameMatches = response.match(videoSeriesNameRegex);
+    const movieNameMatches = response.match(movieNameRegex);
 
-    return matches[0];
+    if(seriesNameMatches?.length && videoSeriesNameMatches?.length) {
+      // video is an episode of a series
+      return {
+        seriesName: seriesNameMatches[0].split(' ')[1].replace(/"/g, ''),
+        videoName: videoSeriesNameMatches[0].split(' ')[1].replace(/"/g, '')
+      }
+    } else if(movieNameMatches?.length) {
+      // video is a movie
+      return {
+        videoName: movieNameMatches[0].split(' ')[1].replace(/"/g, '')
+      }
+    }
+
+    return undefined
   }
 }

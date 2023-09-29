@@ -14,29 +14,36 @@ import { Chat } from 'grammy/types'
 export const startBot = async (
   config: RedVideoBotConfig,
   tg: TelegramService,
-  nameGenerator: OpenAIGenerator
+  nameGenerator: OpenAIGenerator,
+  templateEngine: EjsEngine
 ) => {
   const bot = new Bot(config.auth.botToken)
-  const templateEngine = new EjsEngine();
 
   bot.command('start', (ctx) => ctx.reply('Ciao! Inviami un video per scaricarlo al tuo raspberry py'))
 
   bot.on('message:video', async (ctx) => {
     ctx.reply("Found video");
     try {
-      if (!ctx.message.video.file_id) return ctx.reply('No file id found!')
+      if (!ctx.msg.video.file_id) return ctx.reply('No file id found!')
 
-      const messageId = ctx.message.forward_from_message_id || ctx.message.message_id
+      const messageId = ctx.msg.forward_from_message_id || ctx.msg.message_id
+      const fileSize = prettyBytes(ctx.msg.video.file_size!)
 
-      const fileSize = prettyBytes(ctx.message.video.file_size!)
-      const fileName = await nameGenerator.generateName(JSON.stringify(ctx.message, null, 2))
+      const currentSeries = fs.readdirSync(config.videoDir + '/tv', { withFileTypes: true })
+        .filter(dirent => dirent.isDirectory())
+        .map(dirent => dirent.name)
+
+
+      const {seriesName, videoName} = await nameGenerator.generateName(JSON.stringify(ctx.msg, null, 2), currentSeries);
 
       // render info message
       const videoInfo = templateEngine.renderVideoInfo({
-        fileName,
+        fileName: videoName,
         fileSize,
-        duration: ctx.message.video.duration,
-        fileId: ctx.message.video.file_id,
+        duration: prettyMilliseconds(ctx.msg.video.duration * 1000, { secondsDecimalDigits: 0 }),
+        isSeries: !!seriesName,
+        seriesName,
+        fileId: ctx.msg.video.file_id,
       })
 
       ctx.reply(videoInfo, { parse_mode: 'HTML' })
@@ -47,20 +54,20 @@ export const startBot = async (
       let lastSentProgress = bigInt.zero
 
       let chatName
-      if (ctx.message.forward_from_chat) {
-        if (ctx.message.forward_from_chat.type === 'group') {
-          chatName = ctx.message.forward_from_chat.title
+      if (ctx.msg.forward_from_chat) {
+        if (ctx.msg.forward_from_chat.type === 'group') {
+          chatName = ctx.msg.forward_from_chat.title
         } else {
-          chatName = ctx.message.forward_from_chat.username
+          chatName = ctx.msg.forward_from_chat.username
         }
       } else {
-        chatName = (ctx.message.chat as Chat.GroupChat).title || (ctx.message.chat as Chat.PrivateChat).username
+        chatName = (ctx.msg.chat as Chat.GroupChat).title || (ctx.msg.chat as Chat.PrivateChat).username
       }
 
       
 
       // if the chat of the message is the user for the TelegramService, we need to change it to the bot
-      if(chatName == ctx.message.from.username)
+      if(chatName == ctx.msg.from.username)
         chatName = 'RedVideoDL_bot'
 
       let lastMsg = ''
@@ -78,7 +85,7 @@ export const startBot = async (
           const elapsedSeconds = (Date.now() - start) / 1000
           const speed = prettyBytes(progress.toJSNumber() / elapsedSeconds) + '/s'
           const remainingMs = (total.toJSNumber() - progress.toJSNumber()) / (progress.toJSNumber() / elapsedSeconds) * 1000
-          const remainingSeconds = remainingMs === Infinity ? '∞' : prettyMilliseconds(remainingMs)
+          const remainingSeconds = remainingMs === Infinity ? '∞' : prettyMilliseconds(remainingMs, { secondsDecimalDigits: 0 })
 
           if (progress.compare(lastSentProgress) !== 0 && lastSentTime + 2000 < Date.now()) {
             lastSentTime = Date.now()
@@ -121,12 +128,19 @@ export const startBot = async (
       )
 
       const extension = mime.extension(mimeType)
-      const finalName = `${fileName}.${extension}`
+      const finalName = `${videoName}.${extension}`
+      const finalPath = config.videoDir + '/' + (seriesName ? 'tv/' + seriesName + '/' : 'movies/') + finalName
 
-      ctx.reply(`Saving video to ${config.videoDir}/${finalName}`)
-      const writeStream = fs.createWriteStream(
-        config.videoDir + '/' + finalName
-      )
+      // Create all necessary directories, if they don't exist
+      const dir = finalPath.split('/')
+      dir.pop()
+      const dirPath = dir.join('/')
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true })
+      }
+
+      ctx.reply(`Saving video to ${finalPath}`)
+      const writeStream = fs.createWriteStream(finalPath)
       writeStream.write(buffer)
       writeStream.on('finish', () => {
         console.log('wrote all data to file')

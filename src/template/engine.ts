@@ -1,13 +1,13 @@
-import Mustache from 'mustache'
-
-export interface VideoInfo {
+export type VideoInfo = {
   fileName: string
   fileSize: string
-  duration: number
+  duration: string
   fileId: string
+  isSeries?: boolean
+  seriesName?: string
 }
 
-export interface ProgressInfo {
+export type ProgressInfo = {
   progressPercentage: number
   progress: string
   total: string
@@ -15,7 +15,13 @@ export interface ProgressInfo {
   timeLeft: string
 }
 
+export type OpenAIPromptInfo = {
+  ctxJson: string
+  seriesNames: string
+}
+
 export interface Engine {
   renderVideoInfo(videoInfo: VideoInfo): string
   renderProgressInfo(progressInfo: ProgressInfo): string
+  renderOpenAIPrompt(promptInfo: OpenAIPromptInfo): string
 }

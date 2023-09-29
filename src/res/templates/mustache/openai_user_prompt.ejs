@@ -1,0 +1,23 @@
+In this message, you will find an example of a "ctx" object received by my telegram bot when a user sends a message that contains a video.
+The information contained in it can be used to extrapolate the video's name.
+The video can be an episode of a series or a movie.
+
+If the video is a movie, I expect the title to be in the following format: "TITLE: Title_Of_The_Movie"
+If the video is an episode of a series you must provide the title in the following format: "TITLE: Name_Of_The_Series_(episode_number)"
+If the video is an episode of a series you must provide also the series name in the following format: "SERIES_NAME: Name_Of_The_Series"
+If you find any suitable series name from the following list use it, otherwise include the new series name in your answer:
+```
+<%= seriesNames %>
+```
+
+If the caption includes additional instructions about how to name the video, follow them.
+
+Always include the "TITLE: " prefix before the title of the video.
+Always include the "SERIES_NAME: " prefix before the name of the series, if the video is an episode of a series.
+ 
+This is the ctx object:
+```
+<%= ctxJson %>
+```
+
+Keep the answer short, and be sure to include the title of the video in the answer.

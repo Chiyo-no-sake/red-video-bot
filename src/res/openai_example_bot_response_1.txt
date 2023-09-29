@@ -1,0 +1,5 @@
+From the given object we can see that the title of the video could be One_Piece_121, it has a number, hence it should be a series.
+The name of the series is One_Piece, and we can assign it to the existing "One_Piece" series.
+
+The title of the video is: TITLE: "One_Piece_121".
+The name of the series is: SERIES_NAME: "One_Piece".
