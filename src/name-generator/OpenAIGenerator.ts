@@ -4,6 +4,7 @@ import { readFile, readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import path from "path";
 
+const maxTries = 3;
 
 export type OpenAIConfig = {
   apiKey: string;
@@ -21,7 +22,8 @@ export class OpenAIGenerator {
       videoName: string
     } | boolean = false;
 
-    while (!info) {
+    let tries = 0;
+    while (!info && tries++ < maxTries ) {
       console.log("Generating info...")
       const response = await this.generatePrediction(ctxJson, currentSeries);
       info = await this.validateResponse(response);
@@ -29,6 +31,8 @@ export class OpenAIGenerator {
       console.log("Generated response:", response, "info (found?):", info);
       if (info) return info;
     }
+
+    throw new Error("Failed to generate info after " + maxTries + " tries. Please try again.")
   }
 
   private async generatePrediction(ctxJson: string, currentSeriesNames: string[]): Promise<string> {
