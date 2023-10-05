@@ -26,13 +26,12 @@ export const startBot = async (
     try {
       if (!ctx.msg.video.file_id) return ctx.reply('No file id found!')
 
-      const messageId = ctx.msg.forward_from_message_id || ctx.msg.message_id
+      const messageDate = ctx.msg.date;
       const fileSize = prettyBytes(ctx.msg.video.file_size!)
 
       const currentSeries = fs.readdirSync(config.videoDir + '/tv', { withFileTypes: true })
         .filter(dirent => dirent.isDirectory())
         .map(dirent => dirent.name)
-
 
       const {seriesName, videoName} = await nameGenerator.generateName(JSON.stringify(ctx.msg, null, 2), currentSeries);
 
@@ -53,18 +52,7 @@ export const startBot = async (
       let percentMessageId: number | undefined = undefined
       let lastSentProgress = bigInt.zero
 
-      let chatName
-      if (ctx.msg.forward_from_chat) {
-        if (ctx.msg.forward_from_chat.type === 'group') {
-          chatName = ctx.msg.forward_from_chat.title
-        } else {
-          chatName = ctx.msg.forward_from_chat.username
-        }
-      } else {
-        chatName = (ctx.msg.chat as Chat.GroupChat).title || (ctx.msg.chat as Chat.PrivateChat).username
-      }
-
-      
+      let chatName = (ctx.msg.chat as Chat.GroupChat).title || (ctx.msg.chat as Chat.PrivateChat).username
 
       // if the chat of the message is the user for the TelegramService, we need to change it to the bot
       if(chatName == ctx.msg.from.username)
@@ -75,7 +63,7 @@ export const startBot = async (
       const { buffer, fileName: _, mimeType } = await tg.downloadMediaFromMessage(
         {
           chatName: chatName,
-          msgId: messageId,
+          msgDateSeconds: messageDate,
         },
         async (progress, total) => {
           const progressPercentage = progress
@@ -98,7 +86,7 @@ export const startBot = async (
             })
 
             if (!percentMessageId) {
-              percentMessageId = (await ctx.reply(fileStatus)).message_id
+              percentMessageId = (await ctx.reply(fileStatus, {parse_mode: 'HTML'})).message_id
             } else if (lastMsg !== fileStatus) {
               await ctx.api.editMessageText(
                 ctx.chat.id,

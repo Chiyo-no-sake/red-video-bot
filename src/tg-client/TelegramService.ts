@@ -38,13 +38,10 @@ export default class TelegramService {
 	console.log(this.sessionString);
     }
 
-    async downloadMediaFromMessage(mediaData: { chatName?: string, msgId: number}, onDownloadProgress?: (progress: BigInteger, total: BigInteger) => void) {
+    async downloadMediaFromMessage(mediaData: { chatName?: string, msgDateSeconds: number}, onDownloadProgress?: (progress: BigInteger, total: BigInteger) => void) {
         const chatEntity = await this.client.getEntity(mediaData.chatName)
-        const messages = (await this.client?.getMessages(chatEntity, {
-            ids: [mediaData.msgId]
-        }));
-
-        const message = messages[0];
+        const messages = await this.client?.getMessages(chatEntity)
+        const message = messages.find((msg) => msg.date === mediaData.msgDateSeconds && !!msg.media)
 
         await delay(500)
 
