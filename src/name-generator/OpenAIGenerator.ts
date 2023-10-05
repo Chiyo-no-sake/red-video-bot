@@ -43,7 +43,7 @@ export class OpenAIGenerator {
     const len = promptEncoded.length;
 
     let model = this.config.engine;
-    if(len > 4050) {
+    if(len > 4000) {
       model += "-16k";
     }
 
