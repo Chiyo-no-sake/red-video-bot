@@ -93,7 +93,7 @@ export class OpenAIGenerator {
     const p = fileURLToPath(import.meta.url)
     const __dirname = path.dirname(p)
 
-    const exampleCtx1 = readFileSync(__dirname + '/../res/openai_example_ctx.txt').toString()
+    const exampleCtx1 = readFileSync(__dirname + '/../res/openai_example_ctx_1.txt').toString()
     const exampleCtx2 = readFileSync(__dirname + '/../res/openai_example_ctx_2.txt').toString()
     const exampleCtxFilm = readFileSync(__dirname + '/../res/openai_example_ctx_film.txt').toString()
     const exampleSeriesNames1 = readFileSync(__dirname + '/../res/openai_example_series_1.txt').toString()
