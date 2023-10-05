@@ -1,6 +1,5 @@
-From the given object we can see that the title of the video could be One_Piece_121, it has a number, hence it should be a series.
-Removing the episode number, we can see that the name of the series is One_Piece.
-There is no existing series with the name One_Piece, hence we can create a new series with the name One_Piece.
+The ctx object given contains many references to the anime "L'attacco dei giganti" so we can see that it is a series, we can also read the episode number: 1.
+There is no existing series with the name L_Attacco_Dei_Giganti, hence we can create a new series with the name L_Attacco_Dei_Giganti.
 
-The title of the video is: TITLE: "One_Piece_121".
-The name of the series is: SERIES_NAME: "One_Piece".
+The title of the video is: TITLE: "L_Attacco_Dei_Giganti_1".
+The name of the series is: SERIES_NAME: "L_Attacco_Dei_Giganti".

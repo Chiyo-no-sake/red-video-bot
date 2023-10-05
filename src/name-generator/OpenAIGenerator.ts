@@ -93,7 +93,8 @@ export class OpenAIGenerator {
     const p = fileURLToPath(import.meta.url)
     const __dirname = path.dirname(p)
 
-    const exampleCtx = readFileSync(__dirname + '/../res/openai_example_ctx.txt').toString()
+    const exampleCtx1 = readFileSync(__dirname + '/../res/openai_example_ctx.txt').toString()
+    const exampleCtx2 = readFileSync(__dirname + '/../res/openai_example_ctx_2.txt').toString()
     const exampleCtxFilm = readFileSync(__dirname + '/../res/openai_example_ctx_film.txt').toString()
     const exampleSeriesNames1 = readFileSync(__dirname + '/../res/openai_example_series_1.txt').toString()
     const exampleSeriesNames2 = readFileSync(__dirname + '/../res/openai_example_series_2.txt').toString()
@@ -102,8 +103,8 @@ export class OpenAIGenerator {
     const exampleResponse2 = readFileSync(__dirname + '/../res/openai_example_bot_response_2.txt').toString()
     const exampleResponseFilm = readFileSync(__dirname + '/../res/openai_example_bot_response_film.txt').toString()
 
-    const examplePrompt1 = this.engine.renderOpenAIPrompt({ctxJson: exampleCtx, seriesNames: exampleSeriesNames1})
-    const examplePrompt2 = this.engine.renderOpenAIPrompt({ctxJson: exampleCtx, seriesNames: exampleSeriesNames2})
+    const examplePrompt1 = this.engine.renderOpenAIPrompt({ctxJson: exampleCtx1, seriesNames: exampleSeriesNames1})
+    const examplePrompt2 = this.engine.renderOpenAIPrompt({ctxJson: exampleCtx2, seriesNames: exampleSeriesNames2})
     const examplePromptFilm = this.engine.renderOpenAIPrompt({ctxJson: exampleCtxFilm, seriesNames: exampleSeriesNames1})
 
     return [
