@@ -33,7 +33,13 @@ export const startBot = async (
         .filter(dirent => dirent.isDirectory())
         .map(dirent => dirent.name)
 
-      const {seriesName, videoName} = await nameGenerator.generateName(JSON.stringify(ctx.msg), currentSeries);
+      const aiInfo = ctx.msg;
+      delete aiInfo.video.thumbnail;
+      delete (aiInfo.video as any).thumb;
+      delete (aiInfo as any).thumb;
+      delete (aiInfo as any).thumbnail;
+      
+      const {seriesName, videoName} = await nameGenerator.generateName(JSON.stringify(aiInfo), currentSeries);
 
       // render info message
       const videoInfo = templateEngine.renderVideoInfo({
