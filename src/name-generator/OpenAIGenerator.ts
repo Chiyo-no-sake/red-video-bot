@@ -39,11 +39,11 @@ export class OpenAIGenerator {
   private async generatePrediction(ctxJson: string, currentSeriesNames: string[]): Promise<string> {
     const prompt = this.engine.renderOpenAIPrompt({ctxJson, seriesNames: JSON.stringify(currentSeriesNames)})
     const examples = this.getExamples();
-    const chatEncoded = encode(examples.reduce((acc, curr) => acc + curr.content, ''));
+    const chatEncoded = encode(examples.reduce((acc, curr) => acc + curr.content, '') + prompt);
     const len = chatEncoded.length;
 
     let model = this.config.engine;
-    if(len >= 4096) {
+    if(len >= 4000) {
       model += "-16k";
     }
 
