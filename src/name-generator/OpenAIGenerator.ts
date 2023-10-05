@@ -43,7 +43,7 @@ export class OpenAIGenerator {
     const len = ctxJsonEncoded.length;
 
     let model = this.config.engine;
-    if(len > 4096) {
+    if(len > 4000) {
       model += "-16k";
     }
 
