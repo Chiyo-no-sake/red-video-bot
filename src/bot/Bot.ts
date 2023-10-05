@@ -64,13 +64,28 @@ export const startBot = async (
       if(chatName == ctx.msg.from.username)
         chatName = 'RedVideoDL_bot'
 
+      const extension = mime.extension(ctx.msg.video.mime_type)
+      const finalName = `${videoName}.${extension}`
+      const finalPath = config.videoDir + '/' + (seriesName ? 'tv/' + seriesName + '/' : 'movies/') + finalName
+
+      // Create all necessary directories, if they don't exist
+      const dir = finalPath.split('/')
+      dir.pop()
+      const dirPath = dir.join('/')
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true })
+      }
+
+      ctx.reply(`Saving video to ${finalPath}`)
+
       let lastMsg = ''
       let lastSentTime = Date.now()
-      const { buffer, fileName: _, mimeType } = await tg.downloadMediaFromMessage(
+      await tg.downloadMediaFromMessage(
         {
           chatName: chatName,
           msgDateSeconds: messageDate,
         },
+        finalPath,
         async (progress, total) => {
           const progressPercentage = progress
             .multiply(100)
@@ -121,28 +136,7 @@ export const startBot = async (
         { parse_mode: 'HTML' }
       )
 
-      const extension = mime.extension(mimeType)
-      const finalName = `${videoName}.${extension}`
-      const finalPath = config.videoDir + '/' + (seriesName ? 'tv/' + seriesName + '/' : 'movies/') + finalName
-
-      // Create all necessary directories, if they don't exist
-      const dir = finalPath.split('/')
-      dir.pop()
-      const dirPath = dir.join('/')
-      if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true })
-      }
-
-      ctx.reply(`Saving video to ${finalPath}`)
-      const writeStream = fs.createWriteStream(finalPath)
-      writeStream.write(buffer)
-      writeStream.on('finish', () => {
-        console.log('wrote all data to file')
-        ctx.reply(
-          `Video saved`
-        )
-      })
-      writeStream.end()
+      ctx.reply(`🍿 Video saved to ${finalPath}`)
     } catch (e) {
       console.log(e);
       ctx.reply(JSON.stringify(e, undefined, 2))

@@ -38,7 +38,7 @@ export default class TelegramService {
 	console.log(this.sessionString);
     }
 
-    async downloadMediaFromMessage(mediaData: { chatName?: string, msgDateSeconds: number}, onDownloadProgress?: (progress: BigInteger, total: BigInteger) => void) {
+    async downloadMediaFromMessage(mediaData: { chatName?: string, msgDateSeconds: number}, outputFile: string, progressCallback?: (progress: BigInteger, total: BigInteger) => void) {
         const chatEntity = await this.client.getEntity(mediaData.chatName)
         const messages = await this.client?.getMessages(chatEntity)
         const message = messages.find((msg) => msg.date === mediaData.msgDateSeconds && !!msg.media)
@@ -54,22 +54,9 @@ export default class TelegramService {
         }
 
         console.log("Downloading video...")
-        return {
-            fileName: (!message.media as any)?.document?.file_name || "video.mp4",
-            mimeType: (!message.media as any)?.document?.mimeType || "video/mp4",
-            buffer: await this.client?.downloadMedia(message, {
-                progressCallback: onDownloadProgress
-            }
-            // buffer: await this.client?.iterDownload({
-            //     file: new Api.InputDocumentFileLocation({
-            //         id: (!message.media as any)?.document?.id,
-            //         accessHash: (!message.media as any)?.document?.access_hash,
-            //         fileReference: (!message.media as any)?.document?.file_reference
-            //     }),
-            //     requestSize: 1024 * 1024, // 1MB
-            //     chunkSize: 1024 * 1024, // 1MB
-            //     })
-            // })
-        )}
+        await this.client.downloadMedia(message, {
+            progressCallback,
+            outputFile
+        })
     }
 }
