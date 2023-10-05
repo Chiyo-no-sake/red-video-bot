@@ -1,6 +1,3 @@
-From the given object we can see that the title of the video could be One_Piece_121, it has a number, hence it should be a series.
-Removing the episode number, we can see that the name of the series is One_Piece.
-There is no existing series with the name One_Piece, hence we can create a new series with the name One_Piece.
+From the given object we can see that the title of the video could be Un_milione_di_modi_per_morire_nel_west, it does not contain an episode number, hence it should be a movie.
 
-The title of the video is: TITLE: "One_Piece_121".
-The name of the series is: SERIES_NAME: "One_Piece".
+The title of the video is: TITLE: "Un_Milione_Di_Modi_Per_Morire_Nel_West".
