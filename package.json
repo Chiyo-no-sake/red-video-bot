@@ -9,6 +9,7 @@
     "@typescript-eslint/parser": "^6.7.2",
     "dotenv": "^16.3.1",
     "ejs": "^3.1.9",
+    "gpt-3-encoder": "^1.1.4",
     "grammy": "^1.18.3",
     "mime-types": "^2.1.35",
     "openai": "^4.10.0",

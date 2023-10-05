@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { Engine } from "../template/engine";
-import { readFile, readFileSync } from "fs";
+import { readFileSync } from "fs";
+import { encode } from "gpt-3-encoder";
 import { fileURLToPath } from "url";
 import path from "path";
 
@@ -38,6 +39,14 @@ export class OpenAIGenerator {
   private async generatePrediction(ctxJson: string, currentSeriesNames: string[]): Promise<string> {
     const prompt = this.engine.renderOpenAIPrompt({ctxJson, seriesNames: JSON.stringify(currentSeriesNames)})
 
+    const ctxJsonEncoded = encode(ctxJson);
+    const len = ctxJsonEncoded.length;
+
+    let model = this.config.engine;
+    if(len > 4096) {
+      model += "-16k";
+    }
+
     const completion = await this.openAI.chat.completions.create({
       messages: [
         ...this.getExamples(),
@@ -46,7 +55,7 @@ export class OpenAIGenerator {
           content: prompt
         },
       ],
-      model: this.config.engine,
+      model,
     });
 
     return completion.choices[0].message.content;
