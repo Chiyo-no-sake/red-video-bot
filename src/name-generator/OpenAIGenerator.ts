@@ -38,18 +38,18 @@ export class OpenAIGenerator {
 
   private async generatePrediction(ctxJson: string, currentSeriesNames: string[]): Promise<string> {
     const prompt = this.engine.renderOpenAIPrompt({ctxJson, seriesNames: JSON.stringify(currentSeriesNames)})
-
-    const promptEncoded = encode(prompt);
-    const len = promptEncoded.length;
+    const examples = this.getExamples();
+    const chatEncoded = encode(examples.reduce((acc, curr) => acc + curr.content, ''));
+    const len = chatEncoded.length;
 
     let model = this.config.engine;
-    if(len > 4000) {
+    if(len >= 4096) {
       model += "-16k";
     }
 
     const completion = await this.openAI.chat.completions.create({
       messages: [
-        ...this.getExamples(),
+        ...examples,
         { 
           role: 'user', 
           content: prompt
