@@ -1,5 +1,6 @@
 The ctx object given contains "One Piece" so we can see that it is a series, we can also read the episode number: 121.
 Currently no suitable series exists in the given list, so we can create a new one with the name "One_Piece".
+There is no information about a season number.
 
 The title of the video is: TITLE: "One_Piece_121".
 The name of the series is: SERIES_NAME: "One_Piece".
