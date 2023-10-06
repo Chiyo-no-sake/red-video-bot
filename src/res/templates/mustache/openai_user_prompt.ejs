@@ -1,4 +1,4 @@
-The information contained in the following ctx object can be used to extrapolate a video name and, if it is an episode of a series, the series name.
+The information contained in the following ctx object can be used to extrapolate a video name and if it is an episode of a series the series name too.
 If the video is a movie the title must be in this format: "TITLE: Title_Of_The_Movie"
 If the video is an episode of a series the title must be in this format: 'TITLE: "Name_Of_The_Series_(episode_number)"' and the series name must be in this format: 'SERIES_NAME: "Name_Of_The_Series"'
 If you find any suitable series name from the following list use it, otherwise include the new series name in your answer:
@@ -6,8 +6,8 @@ If you find any suitable series name from the following list use it, otherwise i
 <%= seriesNames %>
 ```
 
-Always use 'TITLE: "<your_generated_title>"' in your anser.
-Always use 'SERIES_NAME: "<your_generated_series_name>"' in your answer, if the video is an episode of a series.
+Always use 'TITLE: "<your_title>"' in your anser.
+Always use 'SERIES_NAME: "<your_series_name>"' in your answer, if the video is an episode of a series.
  
 This is the ctx object:
 ```

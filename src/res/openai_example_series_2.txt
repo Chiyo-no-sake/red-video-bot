@@ -1,1 +1,1 @@
-["Lost", "Seven_Deadly_Sins", "Dragonball", "Big Bang Theory"]
+["Breaking_Bad", "Naruto_Shippuden", "Glee", "Big_Bang_Theory", "L_Attacco_Dei_Giganti"]
