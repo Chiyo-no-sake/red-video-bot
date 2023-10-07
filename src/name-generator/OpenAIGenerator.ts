@@ -66,18 +66,18 @@ export class OpenAIGenerator {
     videoName: string
   }> {
     const seriesNameRegex = /SERIES_NAME: ".+"/;
-    const videoSeriesNameRegex = /TITLE: ".+\d{1,4}"/;
+    const episodeNameRegex = /TITLE: ".+\d{1,4}"/;
     const movieNameRegex = /TITLE: ".+"/;
     
     const seriesNameMatches = response.match(seriesNameRegex);
-    const videoSeriesNameMatches = response.match(videoSeriesNameRegex);
+    const episodeNameMatches = response.match(episodeNameRegex);
     const movieNameMatches = response.match(movieNameRegex);
 
-    if(seriesNameMatches?.length && videoSeriesNameMatches?.length) {
+    if(seriesNameMatches?.length && episodeNameMatches?.length) {
       // video is an episode of a series
       return {
         seriesName: seriesNameMatches[0].split('SERIES_NAME: ')[1].replace(/"/g, ''),
-        videoName: videoSeriesNameMatches[0].split('TITLE: ')[1].replace(/"/g, '')
+        videoName: episodeNameMatches[0].split('TITLE: ')[1].replace(/"/g, '')
       }
     } else if(movieNameMatches?.length) {
       // video is a movie
