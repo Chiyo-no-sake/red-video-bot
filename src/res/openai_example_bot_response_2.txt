@@ -2,5 +2,5 @@ The ctx object given contains many references to the anime "L'attacco dei gigant
 There is also enough information to determine the season: "S1".
 We can notice that there is already a series named similarly in the given list: "L_attacco_dei_giganti", we can use that instead of creating another one.
 
-The title of the video is: TITLE: "L_Attacco_Dei_Giganti_S1_1".
+The title of the video is: TITLE: "L_Attacco_Dei_Giganti_s01_e01".
 The name of the series is: SERIES_NAME: "L_Attacco_Dei_Giganti".

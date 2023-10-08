@@ -1,7 +1,8 @@
 The information contained in the following ctx object can be used to extrapolate a video name and if it is an episode of a series the series name too.
 If the video is a movie the title must be in this format: "TITLE: Title_Of_The_Movie"
 If the video is an episode of a series the title must be in this format (replace text inside <> with the episode number): 'TITLE: "Name_Of_The_Series_<episode_number>"' and the series name must be in this format: 'SERIES_NAME: "Name_Of_The_Series"'
-If you find information about the season, like "S<num>" or "Season <num>", include it in the name before the episode number: 'TITLE: "Name_Of_The_Series_S<num>_<episode_number>"'
+If you find information about the season, like "S<num>" or "Season <num>", include it in the name before the episode number: 'TITLE: "Name_Of_The_Series_s<num>_e<episode_number>"'
+Whenever you use the episode number, always use at least 2 digits, if the episode number is 1, use 01, if it is 2, use 02. You are allowed to use more than 2 digits if the episode number is greater than 99.
 If you find any suitable series name from the following list use it, otherwise include the new series name in your answer:
 ```
 <%= seriesNames %>
