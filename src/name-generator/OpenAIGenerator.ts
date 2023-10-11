@@ -80,8 +80,6 @@ export class OpenAIGenerator {
     const exampleCtx1 = readFileSync(__dirname + '/../res/openai_example_ctx_1.txt').toString()
     const exampleCtx2 = readFileSync(__dirname + '/../res/openai_example_ctx_2.txt').toString()
     const exampleCtxFilm = readFileSync(__dirname + '/../res/openai_example_ctx_film.txt').toString()
-    const exampleSeriesNames1 = readFileSync(__dirname + '/../res/openai_example_series_1.txt').toString()
-    const exampleSeriesNames2 = readFileSync(__dirname + '/../res/openai_example_series_2.txt').toString()
 
     const exampleResponse1 = readFileSync(__dirname + '/../res/openai_example_bot_response_1.txt').toString() 
     const exampleResponse2 = readFileSync(__dirname + '/../res/openai_example_bot_response_2.txt').toString()
