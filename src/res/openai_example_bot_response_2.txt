@@ -1,6 +1,4 @@
-The ctx object given contains many references to the anime "L'attacco dei giganti" or "Attack on Titan" so we can see that it is a series, we can also read the episode number: 1.
-There is also enough information to determine the season: "S1".
-We can notice that there is already a series named similarly in the given list: "L_attacco_dei_giganti", we can use that instead of creating another one.
+The ctx object describes an episode of the series "L_Attacco_Dei_Giganti" (Attack on Titan).
+We can notice the episode number from the text "#Ep01" and the season number from the text "S1".
 
-The title of the video is: TITLE: "L_Attacco_Dei_Giganti_s01_e01".
-The name of the series is: SERIES_NAME: "L_Attacco_Dei_Giganti".
+The title of the video is: TITLE: "S01E01".

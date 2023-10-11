@@ -3,6 +3,7 @@
     "module": "ESNext",
     "target": "ES2019",	
     "moduleResolution": "node",
+    "strict": true,
     "noImplicitAny": true,
     "removeComments": true,
     "preserveConstEnums": true,
