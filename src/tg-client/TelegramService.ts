@@ -15,7 +15,7 @@ export default class TelegramService {
     private sessionString: string;
 
     constructor(private readonly config: TelegramServiceConfig) {
-        this.sessionString = config.sessionString;
+        this.sessionString = config.sessionString!;
         this.session = new StringSession(this.sessionString);
         this.rl = createInterface({ input: stdin, output: stdout })
 
@@ -39,7 +39,7 @@ export default class TelegramService {
     }
 
     async downloadMediaFromMessage(mediaData: { chatName?: string, msgDateSeconds: number}, outputFile: string, progressCallback?: (progress: BigInteger, total: BigInteger) => void) {
-        const chatEntity = await this.client.getEntity(mediaData.chatName)
+        const chatEntity = await this.client.getEntity(mediaData.chatName!)
         const messages = await this.client?.getMessages(chatEntity)
         const message = messages.find((msg) => msg.date === mediaData.msgDateSeconds && !!msg.media)
 

@@ -1,16 +1,21 @@
-The information contained in the following ctx object can be used to extrapolate a video name and if it is an episode of a series the series name too.
-If the video is a movie the title must be in this format: "TITLE: Title_Of_The_Movie"
-If the video is an episode of a series the title must be in this format (replace text inside <> with the episode number): 'TITLE: "Name_Of_The_Series_<episode_number>"' and the series name must be in this format: 'SERIES_NAME: "Name_Of_The_Series"'
-If you find information about the season, like "S<num>" or "Season <num>", include it in the name before the episode number: 'TITLE: "Name_Of_The_Series_S<num>_<episode_number>"'
-If you find any suitable series name from the following list use it, otherwise include the new series name in your answer:
-```
-<%= seriesNames %>
-```
+The information contained in the following ctx object can be used to extrapolate a video name.
+The name of the video can only contain letters, numbers and underscores.
+You know for sure that the video is <%= videoType === 'movie' ? 'a movie' : (`an episode of the TV series '${seriesName}'`) %>.
+<%= videoType === 'series' && 'It is possible that the series has seasons. If you find information about the season in the ctx object, include them in the title of the video.' || '' %><%
+if (videoType === 'movie') {
+%>
+You must provide a name for the video in the following format: TITLE: "Title_Of_The_Movie"
+<%
+} else {
+%>
+If you find the text "S<num>" or "Season <num>" or similar in the ctx object, it means the series has seasons. You must include the season number in the title of the video.
+If the video has a season, You must provide a name for the video in the following format: TITLE: "S<season>E<episode>"
+If the video has no season, You must provide a name for the video in the following format: TITLE: "E<episode>"
 
-Always use 'TITLE: "<your_title>"' in your anser.
-Always use 'SERIES_NAME: "<your_series_name>"' in your answer, if the video is an episode of a series.
-Inside names you must only use letters, numbers and underscores, no spaces or other special characters.
- 
+Use always at least 2 digits for the episode number and for the season. For example, if the episode number is 1, write 01. If the episode number is greater than 99, you are free to use as many digits as you want.
+<%
+}
+%>
 This is the ctx object:
 ```
 <%= ctxJson %>

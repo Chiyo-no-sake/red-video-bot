@@ -17,27 +17,24 @@ export class OpenAIGenerator {
 
   constructor(private readonly config: OpenAIConfig, private readonly engine: Engine) {}
 
-  async generateName(ctxJson: string, currentSeries: string[]): Promise<{ seriesName?: string, videoName: string }> {
-    let info: {
-      seriesName?: string,
-      videoName: string
-    } | boolean = false;
+  async generateName(ctxJson: string, seriesName: string | undefined): Promise<string> {
+    let name: string | undefined;
 
     let tries = 0;
-    while (!info && tries++ < maxTries ) {
+    while (!name && tries++ < maxTries ) {
       console.log("Generating info...")
-      const response = await this.generatePrediction(ctxJson, currentSeries);
-      info = await this.validateResponse(response);
+      const response = await this.generatePrediction(ctxJson, seriesName);
+      name = await this.validateResponse(seriesName, response);
 
-      console.log("Generated response:", response, "info (found?):", info);
-      if (info) return info;
+      console.log("Generated response:", response, "name (found?):", name);
+      if (name) return name;
     }
 
     throw new Error("Failed to generate info after " + maxTries + " tries. Please try again.")
   }
 
-  private async generatePrediction(ctxJson: string, currentSeriesNames: string[]): Promise<string> {
-    const prompt = this.engine.renderOpenAIPrompt({ctxJson, seriesNames: JSON.stringify(currentSeriesNames)})
+  private async generatePrediction(ctxJson: string, seriesName: string | undefined): Promise<string> {
+    const prompt = this.engine.renderOpenAIPrompt({ctxJson, seriesName, videoType: seriesName ? 'series' : 'movie'})
     const examples = this.getExamples();
     const chatEncoded = encode(examples.reduce((acc, curr) => acc + curr.content, '') + prompt);
     const len = chatEncoded.length;
@@ -58,32 +55,19 @@ export class OpenAIGenerator {
       model,
     });
 
-    return completion.choices[0].message.content;
+    return completion.choices[0].message.content || '';
   }
 
-  private async validateResponse(response: string): Promise<{
-    seriesName?: string,
-    videoName: string
-  }> {
-    const seriesNameRegex = /SERIES_NAME: ".+"/;
-    const episodeNameRegex = /TITLE: ".+\d{1,4}"/;
-    const movieNameRegex = /TITLE: ".+"/;
-    
-    const seriesNameMatches = response.match(seriesNameRegex);
-    const episodeNameMatches = response.match(episodeNameRegex);
-    const movieNameMatches = response.match(movieNameRegex);
+  private async validateResponse(seriesName: string | undefined, response: string): Promise<string | undefined> {
+    let videoNameRegex = /TITLE: ".*"/g;
 
-    if(seriesNameMatches?.length && episodeNameMatches?.length) {
-      // video is an episode of a series
-      return {
-        seriesName: seriesNameMatches[0].split('SERIES_NAME: ')[1].replace(/"/g, ''),
-        videoName: episodeNameMatches[0].split('TITLE: ')[1].replace(/"/g, '')
-      }
-    } else if(movieNameMatches?.length) {
-      // video is a movie
-      return {
-        videoName: movieNameMatches[0].split('TITLE: ')[1].replace(/"/g, '')
-      }
+    if (seriesName) {
+      videoNameRegex = /TITLE: "S?\d*E\d+"/g;
+    }
+    
+    const videoNameMatches = response.match(videoNameRegex);
+    if(videoNameMatches?.length) {
+      return videoNameMatches[0].split('TITLE: ')[1].replace(/"/g, '');
     }
 
     return undefined
@@ -103,9 +87,9 @@ export class OpenAIGenerator {
     const exampleResponse2 = readFileSync(__dirname + '/../res/openai_example_bot_response_2.txt').toString()
     const exampleResponseFilm = readFileSync(__dirname + '/../res/openai_example_bot_response_film.txt').toString()
 
-    const examplePrompt1 = this.engine.renderOpenAIPrompt({ctxJson: exampleCtx1, seriesNames: exampleSeriesNames1})
-    const examplePrompt2 = this.engine.renderOpenAIPrompt({ctxJson: exampleCtx2, seriesNames: exampleSeriesNames2})
-    const examplePromptFilm = this.engine.renderOpenAIPrompt({ctxJson: exampleCtxFilm, seriesNames: exampleSeriesNames1})
+    const examplePrompt1 = this.engine.renderOpenAIPrompt({ctxJson: exampleCtx1, seriesName: 'One_Piece', videoType: 'series'})
+    const examplePrompt2 = this.engine.renderOpenAIPrompt({ctxJson: exampleCtx2, seriesName: 'L_Attacco_Dei_Giganti', videoType: 'series'})
+    const examplePromptFilm = this.engine.renderOpenAIPrompt({ctxJson: exampleCtxFilm, seriesName: undefined, videoType: 'movie'})
 
     return [
       {

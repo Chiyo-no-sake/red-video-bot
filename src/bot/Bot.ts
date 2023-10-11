@@ -9,7 +9,10 @@ import EjsEngine from '../template/mustacheEngine.js'
 import { OpenAIGenerator } from '../name-generator/OpenAIGenerator.js'
 import mime from 'mime-types'
 import { Chat } from 'grammy/types'
+import { getAvailableSeries } from '../series_utils.js'
 
+
+let currentSeriesName: string | undefined = undefined
 
 export const startBot = async (
   config: RedVideoBotConfig,
@@ -19,19 +22,56 @@ export const startBot = async (
 ) => {
   const bot = new Bot(config.auth.botToken)
 
-  bot.command('start', (ctx) => ctx.reply('Ciao! Inviami un video per scaricarlo al tuo raspberry py'))
+  bot.command('start', (ctx) => ctx.reply('Hi! Send me a video and I will download it for you 🍿'))
 
+  bot.command('series', async (ctx) => {
+    // If no text is provided after command, return the list of series as buttons, so the user can choose one
+    // If text is provided, set the series name to the text
+    const seriesDir = config.videoDir + '/tv'
+    const series = await getAvailableSeries(seriesDir);
+
+    if(ctx.msg.text === '/series') {
+      const buttons = series.map(seriesName => {
+        return {
+          text: seriesName,
+          callback_data: seriesName
+        }
+      })
+
+      ctx.reply('Choose a series, or call again <code>/series NewName</code> to create a series', {
+        reply_markup: {
+          inline_keyboard: [buttons]
+        },
+        parse_mode: 'HTML'
+      })
+    } else {
+      currentSeriesName = ctx.msg.text.replace('/series ', '')
+      if(!series.includes(currentSeriesName)) {
+        fs.mkdirSync(seriesDir + '/' + currentSeriesName);
+      }
+      ctx.reply(`Series set to ${currentSeriesName}\nVideos will be saved to ${config.videoDir}/tv/${currentSeriesName}`)
+    }
+
+  })
+
+  bot.command('movie', async (ctx) => {
+    currentSeriesName = undefined
+    ctx.reply(`Movie mode enabled. \nVideos will be saved to ${config.videoDir}/movies`)
+  });
+
+  // Set the series name to the callback data upon button click
+  bot.on('callback_query:data', async (ctx) => {
+    currentSeriesName = ctx.callbackQuery.data
+    ctx.reply(`Series set to ${currentSeriesName}\nVideos will be saved to ${config.videoDir}/tv/${currentSeriesName}`)
+  });
+
+  // Download a received video
   bot.on('message:video', async (ctx) => {
-    ctx.reply("Found video");
     try {
       if (!ctx.msg.video.file_id) return ctx.reply('No file id found!')
 
       const messageDate = ctx.msg.date;
       const fileSize = prettyBytes(ctx.msg.video.file_size!)
-
-      const currentSeries = fs.readdirSync(config.videoDir + '/tv', { withFileTypes: true })
-        .filter(dirent => dirent.isDirectory())
-        .map(dirent => dirent.name)
 
       const aiInfo = ctx.msg;
       delete aiInfo.video.thumbnail;
@@ -39,7 +79,8 @@ export const startBot = async (
       delete (aiInfo as any).thumb;
       delete (aiInfo as any).thumbnail;
       
-      const {seriesName, videoName} = await nameGenerator.generateName(JSON.stringify(aiInfo), currentSeries);
+      const seriesName = currentSeriesName;
+      const videoName = await nameGenerator.generateName(JSON.stringify(aiInfo), seriesName);
 
       // render info message
       const videoInfo = templateEngine.renderVideoInfo({
@@ -64,7 +105,7 @@ export const startBot = async (
       if(chatName == ctx.msg.from.username)
         chatName = 'RedVideoDL_bot'
 
-      const extension = mime.extension(ctx.msg.video.mime_type)
+      const extension = mime.extension(ctx.msg.video.mime_type || 'application/mp4')
       const finalName = `${videoName}.${extension}`
       const finalPath = config.videoDir + '/' + (seriesName ? 'tv/' + seriesName + '/' : 'movies/') + finalName
 

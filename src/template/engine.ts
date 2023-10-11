@@ -17,7 +17,8 @@ export type ProgressInfo = {
 
 export type OpenAIPromptInfo = {
   ctxJson: string
-  seriesNames: string
+  seriesName: string | undefined
+  videoType: 'movie' | 'series'
 }
 
 export interface Engine {
