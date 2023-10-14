@@ -1,16 +1,14 @@
-import { Bot } from 'grammy'
+import { Bot, CommandContext, Context } from 'grammy'
 import TelegramService from '../tg-client/TelegramService.js'
 import { RedVideoBotConfig } from '../config/Config.js'
 import fs from 'fs'
 import prettyBytes from 'pretty-bytes'
 import prettyMilliseconds from 'pretty-ms'
-import bigInt from 'big-integer'
-import EjsEngine from '../template/mustacheEngine.js'
 import { OpenAIGenerator } from '../name-generator/OpenAIGenerator.js'
-import mime from 'mime-types'
-import { Chat } from 'grammy/types'
 import { getAvailableSeries } from '../series_utils.js'
-
+import { UIService } from '../UIService.js'
+import { VideoInfo } from '../template/Engine.js'
+import { DownloadQueue } from '../download/DownloadQueue.js'
 
 let currentSeriesName: string | undefined = undefined
 
@@ -18,171 +16,143 @@ export const startBot = async (
   config: RedVideoBotConfig,
   tg: TelegramService,
   nameGenerator: OpenAIGenerator,
-  templateEngine: EjsEngine
+  downloadQueue: DownloadQueue,
+  ui: UIService
 ) => {
   const bot = new Bot(config.auth.botToken)
 
-  bot.command('start', (ctx) => ctx.reply('Hi! Send me a video and I will download it for you 🍿'))
-
-  bot.command('series', async (ctx) => {
-    // If no text is provided after command, return the list of series as buttons, so the user can choose one
-    // If text is provided, set the series name to the text
-    const seriesDir = config.videoDir + '/tv'
-    const series = await getAvailableSeries(seriesDir);
-
-    if(ctx.msg.text === '/series') {
-      const buttons = series.map(seriesName => {
-        return {
-          text: seriesName,
-          callback_data: seriesName
-        }
-      })
-
-      ctx.reply('Choose a series, or call again <code>/series NewName</code> to create a series', {
-        reply_markup: {
-          inline_keyboard: [buttons]
-        },
-        parse_mode: 'HTML'
-      })
-    } else {
-      currentSeriesName = ctx.msg.text.replace('/series ', '')
-      if(!series.includes(currentSeriesName)) {
-        fs.mkdirSync(seriesDir + '/' + currentSeriesName);
-      }
-      ctx.reply(`Series set to ${currentSeriesName}\nVideos will be saved to ${config.videoDir}/tv/${currentSeriesName}`)
-    }
-
+  bot.command('start', (ctx) => {
+    ctx.reply('Hi! Send me a video and I will download it for you 🍿')
+    ui.recreate = true
   })
 
-  bot.command('movie', async (ctx) => {
-    currentSeriesName = undefined
-    ctx.reply(`Movie mode enabled. \nVideos will be saved to ${config.videoDir}/movies`)
-  });
+  bot.command('series', (ctx) => {
+    seriesCommand(ctx, config, ui)
+  })
 
-  // Set the series name to the callback data upon button click
+  bot.command('movie', (ctx) => {
+    movieCommand(ctx, ui).then(() => ui.recreate = true)
+  })
+
+  // callback for buttons click
   bot.on('callback_query:data', async (ctx) => {
-    currentSeriesName = ctx.callbackQuery.data
-    ctx.reply(`Series set to ${currentSeriesName}\nVideos will be saved to ${config.videoDir}/tv/${currentSeriesName}`)
-  });
+    buttonsCallback(ctx, ui).then(() => ui.recreate = true)
+  })
 
   // Download a received video
   bot.on('message:video', async (ctx) => {
-    try {
-      if (!ctx.msg.video.file_id) return ctx.reply('No file id found!')
+    onReceivedVideo(ctx, downloadQueue, nameGenerator, ui)
+    ui.recreate = true
+  })
 
-      const messageDate = ctx.msg.date;
-      const fileSize = prettyBytes(ctx.msg.video.file_size!)
+  // Catch all other messages, as well as custom /stop_<id> commands
+  bot.on('message', async (ctx) => {
+    const text = ctx.msg.text
+    if (!text) return
 
-      const aiInfo = ctx.msg;
-      delete aiInfo.video.thumbnail;
-      delete (aiInfo.video as any).thumb;
-      delete (aiInfo as any).thumb;
-      delete (aiInfo as any).thumbnail;
-      
-      const seriesName = currentSeriesName;
-      const videoName = await nameGenerator.generateName(JSON.stringify(aiInfo), seriesName);
-
-      // render info message
-      const videoInfo = templateEngine.renderVideoInfo({
-        fileName: videoName,
-        fileSize,
-        duration: prettyMilliseconds(ctx.msg.video.duration * 1000, { secondsDecimalDigits: 0 }),
-        isSeries: !!seriesName,
-        seriesName,
-        fileId: ctx.msg.video.file_id,
-      })
-
-      ctx.reply(videoInfo, { parse_mode: 'HTML' })
-
-      // Download the video
-      const start = Date.now()
-      let percentMessageId: number | undefined = undefined
-      let lastSentProgress = bigInt.zero
-
-      let chatName = (ctx.msg.chat as Chat.GroupChat).title || (ctx.msg.chat as Chat.PrivateChat).username
-
-      // if the chat of the message is the user for the TelegramService, we need to change it to the bot
-      if(chatName == ctx.msg.from.username)
-        chatName = 'RedVideoDL_bot'
-
-      const extension = mime.extension(ctx.msg.video.mime_type || 'application/mp4')
-      const finalName = `${videoName}.${extension}`
-      const finalPath = config.videoDir + '/' + (seriesName ? 'tv/' + seriesName + '/' : 'movies/') + finalName
-
-      // Create all necessary directories, if they don't exist
-      const dir = finalPath.split('/')
-      dir.pop()
-      const dirPath = dir.join('/')
-      if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true })
-      }
-
-      ctx.reply(`Saving video to ${finalPath}`)
-
-      let lastMsg = ''
-      let lastSentTime = Date.now()
-      await tg.downloadMediaFromMessage(
-        {
-          chatName: chatName,
-          msgDateSeconds: messageDate,
-        },
-        finalPath,
-        async (progress, total) => {
-          const progressPercentage = progress
-            .multiply(100)
-            .divide(total)
-            .toJSNumber()
-          const elapsedSeconds = (Date.now() - start) / 1000
-          const speed = prettyBytes(progress.toJSNumber() / elapsedSeconds) + '/s'
-          const remainingMs = (total.toJSNumber() - progress.toJSNumber()) / (progress.toJSNumber() / elapsedSeconds) * 1000
-          const remainingSeconds = remainingMs === Infinity ? '∞' : prettyMilliseconds(remainingMs, { secondsDecimalDigits: 0 })
-
-          if (progress.compare(lastSentProgress) !== 0 && lastSentTime + 2000 < Date.now()) {
-            lastSentTime = Date.now()
-            const fileStatus = templateEngine.renderProgressInfo({
-              progressPercentage,
-              progress: prettyBytes(progress.toJSNumber()),
-              total: prettyBytes(total.toJSNumber()),
-              timeLeft: remainingSeconds,
-              speed,
-            })
-
-            if (!percentMessageId) {
-              percentMessageId = (await ctx.reply(fileStatus, {parse_mode: 'HTML'})).message_id
-            } else if (lastMsg !== fileStatus) {
-              await ctx.api.editMessageText(
-                ctx.chat.id,
-                percentMessageId,
-                fileStatus,
-                { parse_mode: 'HTML' }
-              )
-            }
-
-            lastSentProgress = progress
-            lastMsg = fileStatus
-          }
-        }
-      )
-
-      await ctx.api.editMessageText(
-        ctx.chat.id,
-        percentMessageId!,
-        templateEngine.renderProgressInfo({
-          progressPercentage: 100,
-          progress: prettyBytes(lastSentProgress.toJSNumber()),
-          total: prettyBytes(lastSentProgress.toJSNumber()),
-          speed: prettyBytes(0) + '/s', 
-          timeLeft: prettyMilliseconds(0)
-        }),
-        { parse_mode: 'HTML' }
-      )
-
-      ctx.reply(`🍿 Video saved to ${finalPath}`)
-    } catch (e) {
-      console.log(e);
-      ctx.reply(JSON.stringify(e, undefined, 2))
+    if (text.startsWith('/stop_')) {
+      stopCommand(ctx as any, downloadQueue, ui)
     }
+
+    ui.recreate = true
   })
 
   await bot.start()
+}
+
+async function seriesCommand(
+  ctx: any,
+  config: RedVideoBotConfig,
+  ui: UIService
+) {
+  // If no text is provided after command, return the list of series as buttons, so the user can choose one
+  // If text is provided, set the series name to the text
+  const seriesDir = config.videoDir + '/tv'
+  const series = await getAvailableSeries(seriesDir)
+
+  if (ctx.msg.text === '/series') {
+    // if no series name is provided, return the list of series as buttons
+    ui.sendSeriesPrompt(ctx, series)
+  } else {
+    // if a series name is provided, set the series name to the text
+    currentSeriesName = ctx.msg.text.replace('/series ', '')
+    if (currentSeriesName && !series.includes(currentSeriesName)) {
+      fs.mkdirSync(seriesDir + '/' + currentSeriesName)
+    }
+
+    ui.updateMode(ctx, { mode: 'Series', seriesName: currentSeriesName })
+    ui.clearSeriesPrompt(ctx)
+  }
+}
+
+async function movieCommand(
+  ctx: any,
+  ui: UIService
+) {
+  currentSeriesName = undefined
+  ui.updateMode(ctx, { mode: 'Movie' })
+  ui.clearSeriesPrompt(ctx)
+}
+
+async function buttonsCallback(
+  ctx: any,
+  ui: UIService
+) {
+  currentSeriesName = ctx.callbackQuery.data
+  ui.updateMode(ctx, { mode: 'Series', seriesName: currentSeriesName })
+  ui.clearSeriesPrompt(ctx)
+}
+
+async function onReceivedVideo(
+  ctx: any,
+  downloadQueue: DownloadQueue,
+  nameGenerator: OpenAIGenerator,
+  ui: UIService,
+  onStart: (id: string) => void = () => {}
+) {
+  try {
+    if (!ctx.msg.video.file_id) return ctx.reply('No file id found!')
+
+    const fileSize = prettyBytes(ctx.msg.video.file_size!)
+
+    const aiInfo = ctx.msg
+    delete aiInfo.video.thumbnail
+    delete (aiInfo.video as any).thumb
+    delete (aiInfo as any).thumb
+    delete (aiInfo as any).thumbnail
+
+    const seriesName = currentSeriesName
+    const videoName = await nameGenerator.generateName(
+      JSON.stringify(aiInfo),
+      seriesName
+    )
+
+    // render info message
+    const videoInfo: VideoInfo = {
+      fileName: videoName,
+      fileSize,
+      duration: prettyMilliseconds(ctx.msg.video.duration * 1000, {
+        secondsDecimalDigits: 0,
+      }),
+      isSeries: !!seriesName,
+      seriesName,
+      fileId: ctx.msg.video.file_id,
+    }
+
+    // update UI
+    ui.newFoundVideo(ctx, videoInfo)
+
+    // Download the video
+    downloadQueue.add(ctx, videoInfo, onStart)
+  } catch (e) {
+    console.log(e)
+    ctx.reply(
+      'Error downloading video: ' + (e as any).message || 'Unknown error'
+    )
+  }
+}
+
+function stopCommand(ctx: CommandContext<Context>, downloadQueue: DownloadQueue, ui: UIService) {
+  const id = ctx.msg.text.replace('/stop_', '')
+  downloadQueue.stopDownload(ctx, id)
 }

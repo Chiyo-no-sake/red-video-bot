@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { Engine } from "../template/engine";
+import { Engine } from "../template/Engine.js"
 import { readFileSync } from "fs";
 import { encode } from "gpt-3-encoder";
 import { fileURLToPath } from "url";

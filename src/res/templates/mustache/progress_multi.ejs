@@ -1,0 +1,18 @@
+📥 <b> Downloading videos </b>
+
+<%if(queue && queue.length > 0) { %>  📊 <b>Queue:</b>
+<% } -%>
+<%for (let el of queue) { -%>
+  - <%= el.fileName %> (<%= el.total %>)
+<%if(el.seriesName) { '      ' + el.seriesName }
+-%>
+<% } -%>
+<%if(queue && queue.length > 0) { -%><br/><% } -%>
+  ⬇️ Downloading:
+
+<%for (let el of downloading) { -%>
+-<%= el.fileName %> /stop_<%= el.id %>
+<%if(!!el.seriesName) { -%>    <%=el.seriesName%> 
+<%}-%>
+    <%= el.progressPercentage %>% - <%= el.speed %> - <%= el.timeLeft %>
+<% } -%>
