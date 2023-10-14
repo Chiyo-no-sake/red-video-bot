@@ -109,5 +109,7 @@ export class VideoDownloader {
       seriesName: videoInfo.seriesName,
       id: dlId,
     })
+
+    onComplete()
   }
 }
