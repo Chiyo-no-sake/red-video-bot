@@ -118,14 +118,12 @@ export class UIService {
       this.messageId = undefined
       ctx.reply(text, {parse_mode: 'HTML'}).then((msg) => {
         this.messageId = msg.message_id
-        ctx.pinChatMessage(this.messageId)
       })
 
       this.recreate = false
     } else {
       ctx.reply(text, {parse_mode: 'HTML'}).then((msg) => {
         this.messageId = msg.message_id
-        ctx.pinChatMessage(this.messageId)
       })
     }
 
