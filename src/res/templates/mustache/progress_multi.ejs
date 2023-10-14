@@ -4,8 +4,9 @@
 <% } -%>
 <%for (let el of queue) { -%>
   - <%= el.fileName %> (<%= el.total %>)
-<%if(el.seriesName) { '      ' + el.seriesName }
--%>
+<%if(!!el.seriesName) { -%>    <%=el.seriesName%> 
+<%}-%>
+
 <% } -%>
 <%if(queue && queue.length > 0) { -%>
 <% } -%>
