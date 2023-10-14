@@ -1,4 +1,3 @@
-import { Logger } from "telegram";
 import { Engine, ProgressInfo, ProgressInfoMultiple, VideoInfo } from "./template/Engine.js";
 import { Context, InlineKeyboard } from "grammy";
 
