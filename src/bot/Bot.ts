@@ -90,7 +90,7 @@ async function movieCommand(
   ui: UIService
 ) {
   currentSeriesName = undefined
-  ui.updateMode(ctx, { mode: 'Movie' })
+  ui.updateMode(ctx, { mode: 'Movie', seriesName: undefined })
   ui.clearSeriesPrompt(ctx)
 }
 
