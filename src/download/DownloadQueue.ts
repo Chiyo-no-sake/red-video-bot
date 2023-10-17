@@ -17,10 +17,12 @@ export type DownloadJob = {
 }
 
 export class DownloadQueue {
-  private readonly maxConcurrentDownloads = 3
   private queue: DownloadJob[] = []
   private downloading: DownloadJob[] = []
 
+  // property with setter
+  private maxConcurrentDownloads = 3
+  
   constructor(
     private readonly videoDownloader: VideoDownloader,
     private readonly ui: UIService
@@ -64,6 +66,16 @@ export class DownloadQueue {
 
   getDownloadIds(): string[] {
     return [...this.queue, ...this.downloading].map((j) => j.id)
+  }
+
+  setConcurrency(ctx: Context, value: number) {
+    this.maxConcurrentDownloads = value
+    while (this.downloading.length < this.maxConcurrentDownloads) {
+      this.downloadNext().catch((e) => {
+        console.log(e)
+        ctx.reply('Error downloading video: ' + (e as any).message || 'Unknown error')
+      })
+    }
   }
 
   private async downloadNext() {

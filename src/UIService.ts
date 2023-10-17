@@ -56,7 +56,7 @@ export class UIService {
       this.progressMsgTxt = this.templateEngine.renderProgressInfo(progressInfo)
     }
 
-    this._replyWithUpdates(ctx)
+    this._replyWithUpdates(ctx, true)
   }
 
   sendSeriesPrompt(ctx: Context, series: string[]) {
@@ -97,9 +97,13 @@ export class UIService {
     }
   }
 
-  private async _replyWithUpdates(ctx: Context) {
+  private async _replyWithUpdates(ctx: Context, noRecreate: boolean = false) {
     if(!ctx.chat?.id) {
       throw new Error('Cannot update message: No chat id')
+    }
+
+    if(noRecreate) {
+      this.recreate = false
     }
   
     let text = this.modeMsgTxt

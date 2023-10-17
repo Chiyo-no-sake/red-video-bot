@@ -34,6 +34,18 @@ export const startBot = async (
     movieCommand(ctx, ui).then(() => (ui.recreate = true))
   })
 
+  bot.command('concurrency', (ctx) => {
+    const concurrency = parseInt(ctx.msg.text.replace('/concurrency ', ''))
+    if (isNaN(concurrency)) {
+      ctx.reply('Invalid concurrency value')
+      return
+    }
+
+    downloadQueue.setConcurrency(ctx, concurrency)
+    ctx.reply('Concurrency set to ' + concurrency)
+    ui.recreate = true
+  })
+
   // callback for buttons click
   bot.on('callback_query:data', async (ctx) => {
     buttonsCallback(ctx, ui).then(() => (ui.recreate = true))
