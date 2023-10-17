@@ -31,12 +31,12 @@ export const startBot = async (
   })
 
   bot.command('movie', (ctx) => {
-    movieCommand(ctx, ui).then(() => ui.recreate = true)
+    movieCommand(ctx, ui).then(() => (ui.recreate = true))
   })
 
   // callback for buttons click
   bot.on('callback_query:data', async (ctx) => {
-    buttonsCallback(ctx, ui).then(() => ui.recreate = true)
+    buttonsCallback(ctx, ui).then(() => (ui.recreate = true))
   })
 
   // Download a received video
@@ -65,42 +65,51 @@ async function seriesCommand(
   config: RedVideoBotConfig,
   ui: UIService
 ) {
-  // If no text is provided after command, return the list of series as buttons, so the user can choose one
-  // If text is provided, set the series name to the text
-  const seriesDir = config.videoDir + '/tv'
-  const series = await getAvailableSeries(seriesDir)
+  try {
+    // If no text is provided after command, return the list of series as buttons, so the user can choose one
+    // If text is provided, set the series name to the text
+    const seriesDir = config.videoDir + '/tv'
+    const series = await getAvailableSeries(seriesDir)
 
-  if (ctx.msg.text === '/series') {
-    // if no series name is provided, return the list of series as buttons
-    ui.sendSeriesPrompt(ctx, series)
-  } else {
-    // if a series name is provided, set the series name to the text
-    currentSeriesName = ctx.msg.text.replace('/series ', '')
-    if (currentSeriesName && !series.includes(currentSeriesName)) {
-      fs.mkdirSync(seriesDir + '/' + currentSeriesName)
+    if (ctx.msg.text === '/series') {
+      // if no series name is provided, return the list of series as buttons
+      ui.sendSeriesPrompt(ctx, series)
+    } else {
+      // if a series name is provided, set the series name to the text
+      currentSeriesName = ctx.msg.text.replace('/series ', '')
+      if (currentSeriesName && !series.includes(currentSeriesName)) {
+        fs.mkdirSync(seriesDir + '/' + currentSeriesName)
+      }
+
+      ui.updateMode(ctx, { mode: 'Series', seriesName: currentSeriesName })
+      ui.clearSeriesPrompt(ctx)
     }
-
-    ui.updateMode(ctx, { mode: 'Series', seriesName: currentSeriesName })
-    ui.clearSeriesPrompt(ctx)
+  } catch (e) {
+    console.log(e)
+    ctx.reply('Error: ' + (e as Error).message)
   }
 }
 
-async function movieCommand(
-  ctx: any,
-  ui: UIService
-) {
-  currentSeriesName = undefined
-  ui.updateMode(ctx, { mode: 'Movie', seriesName: undefined })
-  ui.clearSeriesPrompt(ctx)
+async function movieCommand(ctx: any, ui: UIService) {
+  try {
+    currentSeriesName = undefined
+    ui.updateMode(ctx, { mode: 'Movie', seriesName: undefined })
+    ui.clearSeriesPrompt(ctx)
+  } catch (e) {
+    console.log(e)
+    ctx.reply('Error: ' + (e as Error).message)
+  }
 }
 
-async function buttonsCallback(
-  ctx: any,
-  ui: UIService
-) {
-  currentSeriesName = ctx.callbackQuery.data
-  ui.updateMode(ctx, { mode: 'Series', seriesName: currentSeriesName })
-  ui.clearSeriesPrompt(ctx)
+async function buttonsCallback(ctx: any, ui: UIService) {
+  try {
+    currentSeriesName = ctx.callbackQuery.data
+    ui.updateMode(ctx, { mode: 'Series', seriesName: currentSeriesName })
+    ui.clearSeriesPrompt(ctx)
+  } catch (e) {
+    console.log(e)
+    ctx.reply('Error: ' + (e as Error).message)
+  }
 }
 
 async function onReceivedVideo(
@@ -152,7 +161,11 @@ async function onReceivedVideo(
   }
 }
 
-function stopCommand(ctx: CommandContext<Context>, downloadQueue: DownloadQueue, ui: UIService) {
+function stopCommand(
+  ctx: CommandContext<Context>,
+  downloadQueue: DownloadQueue,
+  ui: UIService
+) {
   const id = ctx.msg.text.replace('/stop_', '')
   downloadQueue.stopDownload(ctx, id)
 }

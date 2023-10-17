@@ -3,14 +3,14 @@
 <%if(queue && queue.length > 0) { %>  📊 <b>Queue:</b>
 <% } -%>
 <%for (let el of queue) { -%>
-  - <%= el.fileName %> (<%= el.total %>)
+  - <%= el.fileName %> /stop_<%= el.id %>
 <%if(!!el.seriesName) { -%>    <%=el.seriesName%> 
 <%}-%>
 
 <% } -%>
 <%if(queue && queue.length > 0) { -%>
 <% } -%>
-  ⬇️ Downloading:
+  ⬇️ <b>Downloading:</b>
 
 <%for (let el of downloading) { -%>
 -<%= el.fileName %> /stop_<%= el.id %>

@@ -2,7 +2,7 @@ import { Engine, ProgressInfo, ProgressInfoMultiple, VideoInfo } from "./templat
 import { Context, InlineKeyboard } from "grammy";
 
 export class UIService {
-  private readonly updateDelay = 3000;
+  private readonly updateDelay = 5000;
 
   private modeMsgTxt: string
   private videoInfoMsgTxt?: string

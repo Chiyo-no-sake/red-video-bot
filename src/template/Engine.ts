@@ -24,7 +24,7 @@ export type ProgressInfo = {
 }
 
 export type ProgressInfoMultiple = {
-  queue: {fileName: string, total: string, seriesName: string | undefined}[],
+  queue: {fileName: string, total: string, seriesName: string | undefined, id: string}[],
   downloading: ProgressInfo[],
 }
 

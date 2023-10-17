@@ -37,7 +37,10 @@ export class DownloadQueue {
     this.queue.push(job)
 
     if (this.downloading.length < this.maxConcurrentDownloads) {
-      this.downloadNext()
+      this.downloadNext().catch((e) => {
+        console.log(e)
+        ctx.reply('Error downloading video: ' + (e as any).message || 'Unknown error')
+      })
     }
 
     return job.id
@@ -52,7 +55,7 @@ export class DownloadQueue {
       throw new Error('Job not found')
     }
 
-    if ('stopped' in job) {
+    if (this.downloading.includes(job)) {
       job.stopped = true
     } else {
       this.queue = this.queue.filter((j) => j.id != id)
@@ -111,6 +114,7 @@ export class DownloadQueue {
             speed: prettyBytes(0) + '/s',
             timeLeft: prettyMilliseconds(0),
             seriesName: job.videoInfo.seriesName,
+            id: job.id,
           }
         }),
         downloading: this.downloading.map((job) => {
