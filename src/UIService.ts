@@ -39,7 +39,7 @@ export class UIService {
   async updateProgress(ctx: Context, progressInfo: ProgressInfo | ProgressInfoMultiple | undefined) {
     if (!progressInfo) {
       this.progressMsgTxt = undefined
-      this._replyWithUpdates(ctx)
+      await this._replyWithUpdates(ctx)
       return
     }
 
