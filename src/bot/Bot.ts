@@ -85,7 +85,7 @@ async function seriesCommand(
 
     if (ctx.msg.text === '/series') {
       // if no series name is provided, return the list of series as buttons
-      ui.sendSeriesPrompt(ctx, series)
+      await ui.sendSeriesPrompt(ctx, series)
     } else {
       // if a series name is provided, set the series name to the text
       currentSeriesName = ctx.msg.text.replace('/series ', '')
@@ -93,8 +93,8 @@ async function seriesCommand(
         fs.mkdirSync(seriesDir + '/' + currentSeriesName)
       }
 
-      ui.updateMode(ctx, { mode: 'Series', seriesName: currentSeriesName })
-      ui.clearSeriesPrompt(ctx)
+      await ui.updateMode(ctx, { mode: 'Series', seriesName: currentSeriesName })
+      await ui.clearSeriesPrompt(ctx)
     }
   } catch (e) {
     console.log(e)
@@ -105,8 +105,8 @@ async function seriesCommand(
 async function movieCommand(ctx: any, ui: UIService) {
   try {
     currentSeriesName = undefined
-    ui.updateMode(ctx, { mode: 'Movie', seriesName: undefined })
-    ui.clearSeriesPrompt(ctx)
+    await ui.updateMode(ctx, { mode: 'Movie', seriesName: undefined })
+    await ui.clearSeriesPrompt(ctx)
   } catch (e) {
     console.log(e)
     ctx.reply('Error: ' + (e as Error).message)
@@ -116,8 +116,8 @@ async function movieCommand(ctx: any, ui: UIService) {
 async function buttonsCallback(ctx: any, ui: UIService) {
   try {
     currentSeriesName = ctx.callbackQuery.data
-    ui.updateMode(ctx, { mode: 'Series', seriesName: currentSeriesName })
-    ui.clearSeriesPrompt(ctx)
+    await ui.updateMode(ctx, { mode: 'Series', seriesName: currentSeriesName })
+    await ui.clearSeriesPrompt(ctx)
   } catch (e) {
     console.log(e)
     ctx.reply('Error: ' + (e as Error).message)
@@ -161,7 +161,7 @@ async function onReceivedVideo(
     }
 
     // update UI
-    ui.newFoundVideo(ctx, videoInfo)
+    await ui.newFoundVideo(ctx, videoInfo)
 
     // Download the video
     downloadQueue.add(ctx, videoInfo, onStart)
