@@ -178,6 +178,12 @@ function stopCommand(
   downloadQueue: DownloadQueue,
   ui: UIService
 ) {
-  const id = ctx.msg.text.replace('/stop_', '')
-  downloadQueue.stopDownload(ctx, id)
+  try{
+    const id = ctx.msg.text.replace('/stop_', '')
+    downloadQueue.stopDownload(ctx, id)
+  }catch(e){
+    console.log(e)
+    ctx.reply('Error stopping download: ' + (e as any).message || 'Unknown error')
+  }
 }
+
