@@ -86,7 +86,7 @@ export class DownloadQueue {
     const job = this.queue.shift()!
     this.downloading.push(job)
     job.onStart(job.id)
-    this.videoDownloader.startDownload(
+    return this.videoDownloader.startDownload(
       job.ctx,
       job.id,
       job.videoInfo,

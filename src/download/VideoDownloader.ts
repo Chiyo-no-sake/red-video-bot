@@ -22,7 +22,7 @@ export class VideoDownloader {
     stopDownload: () => Promise<boolean> | boolean, 
     onComplete: () => void,
   ) {
-    this.download(ctx, videoInfo, id, progressCallback, onComplete, stopDownload)
+    return this.download(ctx, videoInfo, id, progressCallback, onComplete, stopDownload)
   }
 
   private async download(ctx: Context, videoInfo: VideoInfo, dlId: string, progressCallback: (info: ProgressInfo) => void, onComplete: () => void, stopDownload: () => Promise<boolean> | boolean) {
