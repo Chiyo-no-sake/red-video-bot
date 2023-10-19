@@ -118,17 +118,15 @@ export class UIService {
       await ctx.api.deleteMessage(ctx.chat?.id, this.messageId)
       this.messageId = undefined
       await delay(1000)
-      await ctx.reply(text, {parse_mode: 'HTML'}).then((msg) => {
-        this.messageId = msg.message_id
-      })
-
-      this.recreate = false
+      const msg = await ctx.reply(text, {parse_mode: 'HTML'})
+      this.messageId = msg.message_id
     } else {
       await ctx.reply(text, {parse_mode: 'HTML'}).then((msg) => {
         this.messageId = msg.message_id
       })
     }
 
+    this.recreate = false
     this.lastSentText = text
   }
 }
