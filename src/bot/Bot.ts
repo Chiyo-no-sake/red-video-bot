@@ -23,7 +23,7 @@ export const startBot = async (
 
   bot.command('start', (ctx) => {
     ctx.reply('Hi! Send me a video and I will download it for you 🍿')
-    ui.recreate = true
+    .then(() => (ui.recreate = true))
   })
 
   bot.command('series', (ctx) => {
@@ -35,15 +35,7 @@ export const startBot = async (
   })
 
   bot.command('concurrency', (ctx) => {
-    const concurrency = parseInt(ctx.msg.text.replace('/concurrency ', ''))
-    if (isNaN(concurrency)) {
-      ctx.reply('Invalid concurrency value')
-      return
-    }
-
-    downloadQueue.setConcurrency(ctx, concurrency)
-    ctx.reply('Concurrency set to ' + concurrency)
-    ui.recreate = true
+    concurrencyCommand(ctx, downloadQueue).then(() => (ui.recreate = true))
   })
 
   // callback for buttons click
@@ -54,7 +46,7 @@ export const startBot = async (
   // Download a received video
   bot.on('message:video', async (ctx) => {
     onReceivedVideo(ctx, downloadQueue, nameGenerator, ui)
-    ui.recreate = true
+      .then(() => (ui.recreate = true))
   })
 
   // Catch all other messages, as well as custom /stop_<id> commands
@@ -113,6 +105,22 @@ async function movieCommand(ctx: any, ui: UIService) {
   }
 }
 
+async function concurrencyCommand(ctx: any, downloadQueue: DownloadQueue) {
+  try {
+    const concurrency = parseInt(ctx.msg.text.replace('/concurrency ', ''))
+    if (isNaN(concurrency)) {
+      await ctx.reply('Invalid concurrency value')
+      return
+    }
+
+    downloadQueue.setConcurrency(ctx, concurrency)
+    await ctx.reply('Concurrency set to ' + concurrency)
+  } catch (e) {
+    console.log(e)
+    await ctx.reply('Error: ' + (e as Error).message)
+  }
+}
+
 async function buttonsCallback(ctx: any, ui: UIService) {
   try {
     currentSeriesName = ctx.callbackQuery.data
@@ -125,19 +133,19 @@ async function buttonsCallback(ctx: any, ui: UIService) {
 }
 
 async function onReceivedVideo(
-  ctx: any,
+  ctx: Context,
   downloadQueue: DownloadQueue,
   nameGenerator: OpenAIGenerator,
   ui: UIService,
   onStart: (id: string) => void = () => {}
 ) {
   try {
-    if (!ctx.msg.video.file_id) return ctx.reply('No file id found!')
+    if (!ctx.msg?.video?.file_id) return ctx.reply('No file id found!')
 
     const fileSize = prettyBytes(ctx.msg.video.file_size!)
 
     const aiInfo = ctx.msg
-    delete aiInfo.video.thumbnail
+    delete aiInfo.video?.thumbnail
     delete (aiInfo.video as any).thumb
     delete (aiInfo as any).thumb
     delete (aiInfo as any).thumbnail
@@ -167,7 +175,7 @@ async function onReceivedVideo(
     downloadQueue.add(ctx, videoInfo, onStart)
   } catch (e) {
     console.log(e)
-    ctx.reply(
+    await ctx.reply(
       'Error downloading video: ' + (e as any).message || 'Unknown error'
     )
   }

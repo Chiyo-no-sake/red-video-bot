@@ -1,5 +1,6 @@
 import { Engine, ProgressInfo, ProgressInfoMultiple, VideoInfo } from "./template/Engine.js";
 import { Context, InlineKeyboard } from "grammy";
+import { delay } from "./utils.js";
 
 export class UIService {
   private readonly updateDelay = 5000;
@@ -56,7 +57,7 @@ export class UIService {
       this.progressMsgTxt = this.templateEngine.renderProgressInfo(progressInfo)
     }
 
-    await this._replyWithUpdates(ctx, true)
+    await this._replyWithUpdates(ctx)
   }
 
   async sendSeriesPrompt(ctx: Context, series: string[]) {
@@ -97,13 +98,9 @@ export class UIService {
     }
   }
 
-  private async _replyWithUpdates(ctx: Context, noRecreate: boolean = false) {
+  private async _replyWithUpdates(ctx: Context) {
     if(!ctx.chat?.id) {
       throw new Error('Cannot update message: No chat id')
-    }
-
-    if(noRecreate) {
-      this.recreate = false
     }
   
     let text = this.modeMsgTxt
@@ -120,6 +117,7 @@ export class UIService {
     else if (this.messageId && this.recreate) {
       await ctx.api.deleteMessage(ctx.chat?.id, this.messageId)
       this.messageId = undefined
+      await delay(1000)
       await ctx.reply(text, {parse_mode: 'HTML'}).then((msg) => {
         this.messageId = msg.message_id
       })
