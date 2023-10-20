@@ -93,23 +93,26 @@ export class DownloadQueue {
       // on progress
       (progress) => {
         job.progressInfo = progress
-        this.ui.updateProgress(job.ctx, this.getProgressStatus())
+        return this.ui.updateProgress(job.ctx, this.getProgressStatus())
       },
       // get stop status
-      () => {
+      async () => {
         const stop = job.stopped
         if(stop) {
           this.downloading = this.downloading.filter((j) => j.id != job.id)
-          this.ui.updateProgress(job.ctx, this.getProgressStatus())
+          await this.ui.updateProgress(job.ctx, this.getProgressStatus())
         }
 
         return !!stop
       },
       // on complete
-      () => {
+      async () => {
         this.downloading = this.downloading.filter((j) => j.id != job.id)
-        this.ui.updateProgress(job.ctx, this.getProgressStatus())
-        this.downloadNext()
+        await this.ui.updateProgress(job.ctx, this.getProgressStatus())
+        this.downloadNext().catch((e) => {
+          console.log(e)
+          job.ctx.reply('Error downloading video: ' + (e as any).message || 'Unknown error')
+        })
       }
     )
   }

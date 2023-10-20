@@ -84,7 +84,7 @@ export class VideoDownloader {
             ? '∞'
             : prettyMilliseconds(remainingMs, { secondsDecimalDigits: 0 })
 
-        progressCallback({
+        return progressCallback({
           progressPercentage,
           fileName: finalName,
           progress: prettyBytes(progress.toJSNumber()),
@@ -99,7 +99,7 @@ export class VideoDownloader {
       () => stopDownload(),
     )
 
-    progressCallback({
+    const p = progressCallback({
       fileName: finalName,
       progressPercentage: 100,
       progress: videoInfo.fileSize,
@@ -111,5 +111,6 @@ export class VideoDownloader {
     })
 
     onComplete()
+    return p;
   }
 }
