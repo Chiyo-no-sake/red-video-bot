@@ -94,6 +94,7 @@ export class UIService {
 
     if (this.seriesPromptMessageId) {
       await ctx.api.deleteMessage(ctx.chat?.id, this.seriesPromptMessageId)
+        .catch(e => console.log('could not delete message: ', e))
       this.seriesPromptMessageId = undefined
     }
   }
@@ -116,6 +117,7 @@ export class UIService {
     }
     else if (this.messageId && this.recreate) {
       await ctx.api.deleteMessage(ctx.chat?.id, this.messageId)
+        .catch(e => console.log('could not delete message: ', e))
       this.messageId = undefined
       await delay(1000)
       const msg = await ctx.reply(text, {parse_mode: 'HTML'})
