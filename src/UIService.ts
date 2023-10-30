@@ -1,9 +1,11 @@
-import { Engine, ProgressInfo, ProgressInfoMultiple, VideoInfo } from "./template/Engine.js";
+import { Engine, ModeInfo, ProgressInfo, ProgressInfoMultiple, VideoInfo } from "./template/Engine.js";
 import { Context, InlineKeyboard } from "grammy";
 import { delay } from "./utils.js";
 
 export class UIService {
   private readonly updateDelay = 5000;
+
+  private currentModeInfo?: ModeInfo;
 
   private modeMsgTxt: string
   private videoInfoMsgTxt?: string
@@ -30,8 +32,8 @@ export class UIService {
     await this._replyWithUpdates(ctx)
   }
 
-  async updateMode(ctx: Context, modeInfo: {mode: 'Movie' | 'Series', seriesName?: string}) {
-    const modeText = this.templateEngine.renderCurrentMode(modeInfo)
+  async updateMode(ctx: Context, modeInfo: Partial<{mode: 'Movie' | 'Series', seriesName?: string, season?: number}>) {
+    const modeText = this.templateEngine.renderCurrentMode({...this.currentModeInfo!, ...modeInfo})
     this.modeMsgTxt = modeText
 
     await this._replyWithUpdates(ctx)

@@ -17,7 +17,7 @@ export class OpenAIGenerator {
 
   constructor(private readonly config: OpenAIConfig, private readonly engine: Engine) {}
 
-  async generateName(ctxJson: string, seriesName: string | undefined): Promise<string> {
+  async generateName(ctxJson: string, seriesName: string | undefined, season: number | undefined): Promise<string> {
     let name: string | undefined;
 
     let tries = 0;
@@ -25,6 +25,8 @@ export class OpenAIGenerator {
       console.log("Generating info...")
       const response = await this.generatePrediction(ctxJson, seriesName);
       name = await this.validateResponse(seriesName, response);
+      if (seriesName && season && name)
+        name = `S${season}${name}`
 
       console.log("Generated response:", response, "name (found?):", name);
       if (name) return name;
@@ -62,12 +64,13 @@ export class OpenAIGenerator {
     let videoNameRegex = /TITLE: ".*"/g;
 
     if (seriesName) {
-      videoNameRegex = /TITLE: "S?\d*E\d+"/g;
+      videoNameRegex = /TITLE: "E\d+"/g;
     }
     
     const videoNameMatches = response.match(videoNameRegex);
     if(videoNameMatches?.length) {
-      return videoNameMatches[0].split('TITLE: ')[1].replace(/"/g, '');
+      const name = videoNameMatches[0].split('TITLE: ')[1].replace(/"/g, '');
+      return name;
     }
 
     return undefined

@@ -1,18 +1,14 @@
 The information contained in the following ctx object can be used to extrapolate a video name.
 The name of the video can only contain letters, numbers and underscores.
-You know for sure that the video is <%= videoType === 'movie' ? 'a movie' : (`an episode of the TV series '${seriesName}'`) %>.
-<%= videoType === 'series' && 'It is possible that the series has seasons. If you find information about the season in the ctx object, include them in the title of the video.' || '' %><%
+You know for sure that the video is <%= videoType === 'movie' ? 'a movie' : (`an episode of the TV series '${seriesName}'`) %>.<%
 if (videoType === 'movie') {
 %>
 You must provide a name for the video in the following format: TITLE: "Title_Of_The_Movie"
 <%
 } else {
 %>
-If you find the text "S<num>" or "Season <num>" or similar in the ctx object, it means the series has seasons. You must include the season number in the title of the video.
-If the video has a season, You must provide a name for the video in the following format: TITLE: "S<season>E<episode>"
-If the video has no season, You must provide a name for the video in the following format: TITLE: "E<episode>"
-
-Use always at least 2 digits for the episode number and for the season. For example, if the episode number is 1, write 01. If the episode number is greater than 99, you are free to use as many digits as you want.
+You must provide a name for the video in the following format: TITLE: "E<episode>"
+Use always at least 2 digits for the episode number. For example, if the episode number is 1, write 01. If the episode number is greater than 99, you are free to use as many digits as you want.
 <%
 }
 %>

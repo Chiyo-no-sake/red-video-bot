@@ -11,6 +11,7 @@ import { VideoInfo } from '../template/Engine.js'
 import { DownloadQueue } from '../download/DownloadQueue.js'
 
 let currentSeriesName: string | undefined = undefined
+let currentSeason: number | undefined = undefined
 
 export const startBot = async (
   config: RedVideoBotConfig,
@@ -36,6 +37,10 @@ export const startBot = async (
 
   bot.command('concurrency', (ctx) => {
     concurrencyCommand(ctx, downloadQueue).then(() => (ui.recreate = true))
+  })
+
+  bot.command('season', (ctx) => {
+    seasonCommand(ctx, ui).then(() => (ui.recreate = true))
   })
 
   // callback for buttons click
@@ -153,7 +158,8 @@ async function onReceivedVideo(
     const seriesName = currentSeriesName
     const videoName = await nameGenerator.generateName(
       JSON.stringify(aiInfo),
-      seriesName
+      seriesName,
+      currentSeason
     )
 
     // render info message
@@ -195,3 +201,32 @@ function stopCommand(
   }
 }
 
+async function seasonCommand(ctx: CommandContext<Context>, ui: UIService) {
+  try {
+    if(currentSeriesName === undefined) {
+      await ctx.reply('Movie mode, to set season use first /series <series name>')
+      return
+    }
+
+    const season = ctx.msg.text.replace('/season ', '')
+    const seasonNum = parseInt(season)
+
+    if (isNaN(seasonNum)) {
+      await ctx.reply('Invalid season number')
+      return
+    }
+    
+    currentSeason = seasonNum
+    await ui.updateMode(ctx, { season: seasonNum })
+    
+    if(seasonNum === 0) {
+      await ctx.reply('Season cleared - No season')
+    }else{
+      await ctx.reply('Season set to ' + seasonNum)
+    }
+    
+  }catch(e) {
+    console.log(e)
+    await ctx.reply('Error: ' + (e as any).message || 'Unknown error')
+  }
+}

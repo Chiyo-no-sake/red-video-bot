@@ -10,6 +10,7 @@ export type VideoInfo = {
 export type ModeInfo = {
   mode: 'Movie' | 'Series'
   seriesName?: string
+  season?: number
 }
 
 export type ProgressInfo = {
