@@ -5,7 +5,11 @@ import { delay } from "./utils.js";
 export class UIService {
   private readonly updateDelay = 5000;
 
-  private currentModeInfo?: ModeInfo;
+  private currentModeInfo?: ModeInfo = {
+    mode: 'Movie',
+    seriesName: undefined,
+    season: undefined,
+  }
 
   private modeMsgTxt: string
   private videoInfoMsgTxt?: string
