@@ -36,7 +36,7 @@ export class UIService {
     await this._replyWithUpdates(ctx)
   }
 
-  async updateMode(ctx: Context, modeInfo: Partial<{mode: 'Movie' | 'Series', seriesName?: string, season?: number}>) {
+  async updateMode(ctx: Context, modeInfo: {mode: 'Movie' | 'Series', seriesName?: string, season?: number}) {
     const modeText = this.templateEngine.renderCurrentMode({...this.currentModeInfo!, ...modeInfo})
     this.modeMsgTxt = modeText
 

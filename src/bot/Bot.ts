@@ -217,7 +217,7 @@ async function seasonCommand(ctx: CommandContext<Context>, ui: UIService) {
     }
     
     currentSeason = seasonNum
-    await ui.updateMode(ctx, { season: seasonNum })
+    await ui.updateMode(ctx, { mode: 'Series', seriesName: currentSeriesName, season: seasonNum })
     
     if(seasonNum === 0) {
       await ctx.reply('Season cleared - No season')
