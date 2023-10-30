@@ -47,22 +47,78 @@ export default class EjsEngine implements Engine {
   }
 
   renderCurrentMode(modeInfo: ModeInfo): string {
-    return render(this.modeTemplate, modeInfo)
+    // transform the modeInfo into an object that has all fields and missing fields are undefined
+    const modeInfoObj = {
+      mode: modeInfo.mode,
+      seriesName: modeInfo.seriesName,
+      season: modeInfo.season,
+    }
+
+    return render(this.modeTemplate, modeInfoObj)
   }
 
   renderVideoInfo(videoInfo: VideoInfo): string {
-    return render(this.videoTemplate, videoInfo)
+    const videoInfoObj = {
+      fileName: videoInfo.fileName,
+      fileSize: videoInfo.fileSize,
+      duration: videoInfo.duration,
+      isSeries: videoInfo.isSeries,
+      seriesName: videoInfo.seriesName,
+      fileId: videoInfo.fileId,
+    }
+
+    return render(this.videoTemplate, videoInfoObj)
   }
 
   renderProgressInfo(progressInfo: ProgressInfo): string {
-    return render(this.progressTemplate, progressInfo)
+    const progressInfoObj = {
+      fileName: progressInfo.fileName,
+      progressPercentage: progressInfo.progressPercentage,
+      progress: progressInfo.progress,
+      total: progressInfo.total,
+      speed: progressInfo.speed,
+      timeLeft: progressInfo.timeLeft,
+      seriesName: progressInfo.seriesName,
+      id: progressInfo.id,
+    }
+
+    return render(this.progressTemplate, progressInfoObj)
   }
 
   renderMultipleProgressInfo(progressInfo: ProgressInfoMultiple): string {
-    return render(this.progressMultipleTemplate, progressInfo)
+    const progressInfoObj = {
+      queue: progressInfo.queue.map((job) => {
+        return {
+          fileName: job.fileName,
+          total: job.total,
+          seriesName: job.seriesName,
+          id: job.id,
+        }
+      }),
+      downloading: progressInfo.downloading.map((job) => {
+        return {
+          fileName: job.fileName,
+          progressPercentage: job.progressPercentage,
+          progress: job.progress,
+          total: job.total,
+          speed: job.speed,
+          timeLeft: job.timeLeft,
+          seriesName: job.seriesName,
+          id: job.id,
+        }
+      }),
+    }
+
+    return render(this.progressMultipleTemplate, progressInfoObj)
   }
 
   renderOpenAIPrompt(promptInfo: OpenAIPromptInfo): string {
-    return render(this.openAIPromptTemplate, promptInfo)
+    const promptInfoObj = {
+      ctxJson: promptInfo.ctxJson,
+      seriesName: promptInfo.seriesName,
+      videoType: promptInfo.videoType,
+    }
+
+    return render(this.openAIPromptTemplate, promptInfoObj)
   }
 }
