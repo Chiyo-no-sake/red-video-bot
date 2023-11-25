@@ -13,9 +13,7 @@ ENV CONFIG_DIR=x
 WORKDIR /usr/src/app
 
 # Bundle app source
-COPY . .
-
-RUN npm install
+COPY dist ./dist
 
 # Run the script
-CMD [ "npm", "start" ]
+CMD [ "node", "dist/src/index.js" ]
