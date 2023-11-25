@@ -4,6 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "dependencies": {
+    "@types/inquirer": "^9.0.3",
     "dotenv": "^16.3.1",
     "ejs": "^3.1.9",
     "gpt-3-encoder": "^1.1.4",
@@ -16,7 +17,6 @@
     "telegram": "^2.18.38"
   },
   "devDependencies": {
-    "@types/inquirer": "^9.0.3",
     "@typescript-eslint/eslint-plugin": "^6.7.2",
     "@typescript-eslint/parser": "^6.7.2",
     "@types/ejs": "^3.1.3",
