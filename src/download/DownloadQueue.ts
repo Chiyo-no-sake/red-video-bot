@@ -1,6 +1,10 @@
 import { Context } from 'grammy'
 import { VideoDownloader } from './VideoDownloader.js'
-import { ProgressInfo, ProgressInfoMultiple, VideoInfo } from '../template/Engine.js'
+import {
+  ProgressInfo,
+  ProgressInfoMultiple,
+  VideoInfo,
+} from '../template/Engine.js'
 import { randomUUID } from 'crypto'
 import { UIService } from '../UIService.js'
 import prettyBytes from 'pretty-bytes'
@@ -12,7 +16,7 @@ export type DownloadJob = {
   videoInfo: VideoInfo
   id: string
   progressInfo?: ProgressInfo
-  stopped?: boolean,
+  stopped?: boolean
   onStart: (id: string) => void
 }
 
@@ -22,26 +26,32 @@ export class DownloadQueue {
 
   // property with setter
   private maxConcurrentDownloads = 3
-  
+
   constructor(
     private readonly videoDownloader: VideoDownloader,
     private readonly ui: UIService
   ) {}
 
-  add(ctx: Context, videoInfo: VideoInfo, onStart: (id: string) => void): string {
+  add(
+    ctx: Context,
+    videoInfo: VideoInfo,
+    onStart: (id: string) => void
+  ): string {
     const job = {
       ctx: ctx,
       videoInfo: videoInfo,
       id: toBase64(randomUUID()).substring(0, 6),
       stopped: false,
-      onStart
+      onStart,
     }
     this.queue.push(job)
 
     if (this.downloading.length < this.maxConcurrentDownloads) {
       this.downloadNext().catch((e) => {
         console.log(e)
-        ctx.reply('Error downloading video: ' + (e as any).message || 'Unknown error')
+        ctx.reply(
+          'Error downloading video: ' + (e as any).message || 'Unknown error'
+        )
       })
     }
 
@@ -70,10 +80,15 @@ export class DownloadQueue {
 
   setConcurrency(ctx: Context, value: number) {
     this.maxConcurrentDownloads = value
-    while (this.downloading.length < this.maxConcurrentDownloads) {
+    while (
+      this.downloading.length < this.maxConcurrentDownloads &&
+      this.queue.length > 0
+    ) {
       this.downloadNext().catch((e) => {
         console.log(e)
-        ctx.reply('Error downloading video: ' + (e as any).message || 'Unknown error')
+        ctx.reply(
+          'Error downloading video: ' + (e as any).message || 'Unknown error'
+        )
       })
     }
   }
@@ -86,7 +101,7 @@ export class DownloadQueue {
     const job = this.queue.shift()!
     this.downloading.push(job)
     job.onStart(job.id)
-    return this.videoDownloader.startDownload(
+    this.videoDownloader.startDownload(
       job.ctx,
       job.id,
       job.videoInfo,
@@ -98,7 +113,7 @@ export class DownloadQueue {
       // get stop status
       async () => {
         const stop = job.stopped
-        if(stop) {
+        if (stop) {
           this.downloading = this.downloading.filter((j) => j.id != job.id)
           await this.ui.updateProgress(job.ctx, this.getProgressStatus())
         }
@@ -109,16 +124,18 @@ export class DownloadQueue {
       async () => {
         this.downloading = this.downloading.filter((j) => j.id != job.id)
         await this.ui.updateProgress(job.ctx, this.getProgressStatus())
-        this.downloadNext().catch((e) => {
+        return this.downloadNext().catch((e) => {
           console.log(e)
-          job.ctx.reply('Error downloading video: ' + (e as any).message || 'Unknown error')
+          job.ctx.reply(
+            'Error downloading video: ' + (e as any).message || 'Unknown error'
+          )
         })
       }
     )
   }
 
   private getProgressStatus(): ProgressInfo | ProgressInfoMultiple | undefined {
-    if(this.queue.length > 0 || this.downloading.length > 1){
+    if (this.queue.length > 0 || this.downloading.length > 1) {
       return {
         queue: this.queue.map((job) => {
           return {
@@ -133,29 +150,33 @@ export class DownloadQueue {
           }
         }),
         downloading: this.downloading.map((job) => {
-          return job.progressInfo || {
-            id: job.id,
-            fileName: job.videoInfo.fileName,
-            progressPercentage: 0,
-            progress: prettyBytes(0),
-            total: prettyBytes(0),
-            speed: prettyBytes(0) + '/s',
-            timeLeft: prettyMilliseconds(0),
-            seriesName: job.videoInfo.seriesName,
-          }
+          return (
+            job.progressInfo || {
+              id: job.id,
+              fileName: job.videoInfo.fileName,
+              progressPercentage: 0,
+              progress: prettyBytes(0),
+              total: prettyBytes(0),
+              speed: prettyBytes(0) + '/s',
+              timeLeft: prettyMilliseconds(0),
+              seriesName: job.videoInfo.seriesName,
+            }
+          )
         }),
       }
-    } else if(this.downloading.length === 1) {
-      return this.downloading[0].progressInfo || {
-        id: this.downloading[0].id,
-        fileName: this.downloading[0].videoInfo.fileName,
-        progressPercentage: 0,
-        progress: prettyBytes(0),
-        total: prettyBytes(0),
-        speed: prettyBytes(0) + '/s',
-        timeLeft: prettyMilliseconds(0),
-        seriesName: this.downloading[0].videoInfo.seriesName,
-      }
+    } else if (this.downloading.length === 1) {
+      return (
+        this.downloading[0].progressInfo || {
+          id: this.downloading[0].id,
+          fileName: this.downloading[0].videoInfo.fileName,
+          progressPercentage: 0,
+          progress: prettyBytes(0),
+          total: prettyBytes(0),
+          speed: prettyBytes(0) + '/s',
+          timeLeft: prettyMilliseconds(0),
+          seriesName: this.downloading[0].videoInfo.seriesName,
+        }
+      )
     } else {
       return undefined
     }

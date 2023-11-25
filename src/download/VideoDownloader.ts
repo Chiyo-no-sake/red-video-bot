@@ -35,6 +35,7 @@ export class VideoDownloader {
     )
   }
 
+  // blocking
   private async download(
     ctx: Context,
     videoInfo: VideoInfo,
