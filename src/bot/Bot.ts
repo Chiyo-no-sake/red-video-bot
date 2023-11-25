@@ -23,8 +23,9 @@ export const startBot = async (
   const bot = new Bot(config.auth.botToken)
 
   bot.command('start', (ctx) => {
-    ctx.reply('Hi! Send me a video and I will download it for you 🍿')
-    .then(() => (ui.recreate = true))
+    ctx
+      .reply('Hi! Send me a video and I will download it for you 🍿')
+      .then(() => (ui.recreate = true))
   })
 
   bot.command('series', (ctx) => {
@@ -50,8 +51,9 @@ export const startBot = async (
 
   // Download a received video
   bot.on('message:video', async (ctx) => {
-    onReceivedVideo(ctx, downloadQueue, nameGenerator, ui)
-      .then(() => (ui.recreate = true))
+    onReceivedVideo(ctx, downloadQueue, nameGenerator, ui).then(
+      () => (ui.recreate = true)
+    )
   })
 
   // Catch all other messages, as well as custom /stop_<id> commands
@@ -66,7 +68,9 @@ export const startBot = async (
     ui.recreate = true
   })
 
-  await bot.start()
+  await bot.start({
+    drop_pending_updates: true,
+  })
 }
 
 async function seriesCommand(
@@ -90,7 +94,10 @@ async function seriesCommand(
         fs.mkdirSync(seriesDir + '/' + currentSeriesName)
       }
 
-      await ui.updateMode(ctx, { mode: 'Series', seriesName: currentSeriesName })
+      await ui.updateMode(ctx, {
+        mode: 'Series',
+        seriesName: currentSeriesName,
+      })
       await ui.clearSeriesPrompt(ctx)
     }
   } catch (e) {
@@ -192,19 +199,23 @@ function stopCommand(
   downloadQueue: DownloadQueue,
   ui: UIService
 ) {
-  try{
+  try {
     const id = ctx.msg.text.replace('/stop_', '')
     downloadQueue.stopDownload(ctx, id)
-  }catch(e){
+  } catch (e) {
     console.log(e)
-    ctx.reply('Error stopping download: ' + (e as any).message || 'Unknown error')
+    ctx.reply(
+      'Error stopping download: ' + (e as any).message || 'Unknown error'
+    )
   }
 }
 
 async function seasonCommand(ctx: CommandContext<Context>, ui: UIService) {
   try {
-    if(currentSeriesName === undefined) {
-      await ctx.reply('Movie mode, to set season use first /series <series name>')
+    if (currentSeriesName === undefined) {
+      await ctx.reply(
+        'Movie mode, to set season use first /series <series name>'
+      )
       return
     }
 
@@ -215,17 +226,20 @@ async function seasonCommand(ctx: CommandContext<Context>, ui: UIService) {
       await ctx.reply('Invalid season number')
       return
     }
-    
+
     currentSeason = seasonNum
-    await ui.updateMode(ctx, { mode: 'Series', seriesName: currentSeriesName, season: seasonNum })
-    
-    if(seasonNum === 0) {
+    await ui.updateMode(ctx, {
+      mode: 'Series',
+      seriesName: currentSeriesName,
+      season: seasonNum,
+    })
+
+    if (seasonNum === 0) {
       await ctx.reply('Season cleared - No season')
-    }else{
+    } else {
       await ctx.reply('Season set to ' + seasonNum)
     }
-    
-  }catch(e) {
+  } catch (e) {
     console.log(e)
     await ctx.reply('Error: ' + (e as any).message || 'Unknown error')
   }
