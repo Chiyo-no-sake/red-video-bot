@@ -15,12 +15,15 @@ let currentSeason: number | undefined = undefined
 
 export const startBot = async (
   config: RedVideoBotConfig,
-  tg: TelegramService,
   nameGenerator: OpenAIGenerator,
   downloadQueue: DownloadQueue,
   ui: UIService
 ) => {
   const bot = new Bot(config.auth.botToken)
+
+  bot.command('rename', async (ctx) => {
+    renameCommand(ctx, downloadQueue).then(() => (ui.recreate = true))
+  })
 
   bot.command('start', (ctx) => {
     ctx
@@ -242,5 +245,33 @@ async function seasonCommand(ctx: CommandContext<Context>, ui: UIService) {
   } catch (e) {
     console.log(e)
     await ctx.reply('Error: ' + (e as any).message || 'Unknown error')
+  }
+}
+
+async function renameCommand(
+  ctx: CommandContext<Context>,
+  downloadQueue: DownloadQueue
+) {
+  try {
+    const oldAndNewNames = ctx.msg.text.replace('/rename ', '').split(' ')
+    if (oldAndNewNames.length !== 2) {
+      await ctx.reply('Invalid syntax. Use /rename <old name> <new name>')
+      return
+    }
+
+    const done = downloadQueue.renameDownload(
+      ctx,
+      oldAndNewNames[0],
+      oldAndNewNames[1]
+    )
+
+    if (!done) {
+      await ctx.reply('No download found with name ' + oldAndNewNames[0])
+    } else {
+      await ctx.reply('New name: ' + oldAndNewNames[1])
+    }
+  } catch (e) {
+    console.log(e)
+    await ctx.reply('Error: ' + (e as Error).message)
   }
 }

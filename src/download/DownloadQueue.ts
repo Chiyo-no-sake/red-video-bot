@@ -93,6 +93,17 @@ export class DownloadQueue {
     }
   }
 
+  renameDownload(ctx: Context, oldName: string, newName: string) {
+    const job = this.queue.find((j) => j.videoInfo.fileName == oldName)
+    if (job) {
+      job.videoInfo.fileName = newName
+      return true
+    } else {
+      ctx.reply('Could not find video to rename')
+      return false
+    }
+  }
+
   private async downloadNext() {
     if (this.queue.length == 0) {
       return
