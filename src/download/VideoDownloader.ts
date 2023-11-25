@@ -3,7 +3,7 @@ import mime from 'mime-types'
 import fs from 'fs'
 import { Chat } from 'grammy/types'
 import { ProgressInfo, VideoInfo } from '../template/Engine.js'
-import TelegramService from '../tg-client/TelegramService'
+import TelegramService from '../tg-client/TelegramService.js'
 import prettyBytes from 'pretty-bytes'
 import prettyMilliseconds from 'pretty-ms'
 
@@ -12,20 +12,37 @@ export type VideoDownloaderConfig = {
 }
 
 export class VideoDownloader {
-  constructor(private readonly config: VideoDownloaderConfig, private readonly tg: TelegramService) {}
+  constructor(
+    private readonly config: VideoDownloaderConfig,
+    private readonly tg: TelegramService
+  ) {}
 
   startDownload(
     ctx: Context,
     id: string,
-    videoInfo: VideoInfo, 
+    videoInfo: VideoInfo,
     progressCallback: (info: ProgressInfo) => void,
-    stopDownload: () => Promise<boolean> | boolean, 
-    onComplete: () => void,
+    stopDownload: () => Promise<boolean> | boolean,
+    onComplete: () => void
   ) {
-    return this.download(ctx, videoInfo, id, progressCallback, onComplete, stopDownload)
+    return this.download(
+      ctx,
+      videoInfo,
+      id,
+      progressCallback,
+      onComplete,
+      stopDownload
+    )
   }
 
-  private async download(ctx: Context, videoInfo: VideoInfo, dlId: string, progressCallback: (info: ProgressInfo) => void, onComplete: () => void, stopDownload: () => Promise<boolean> | boolean) {
+  private async download(
+    ctx: Context,
+    videoInfo: VideoInfo,
+    dlId: string,
+    progressCallback: (info: ProgressInfo) => void,
+    onComplete: () => void,
+    stopDownload: () => Promise<boolean> | boolean
+  ) {
     const start = Date.now()
     if (!ctx.msg?.chat || !ctx.msg?.video || !ctx.msg?.from) {
       throw new Error('Invalid message')
@@ -68,7 +85,7 @@ export class VideoDownloader {
       async (progress, total) => {
         const elapsedSeconds = (Date.now() - start) / 1000
         const speed = prettyBytes(progress.toJSNumber() / elapsedSeconds) + '/s'
-        
+
         const progressPercentage = progress
           .multiply(100)
           .divide(total)
@@ -78,7 +95,7 @@ export class VideoDownloader {
           ((total.toJSNumber() - progress.toJSNumber()) /
             (progress.toJSNumber() / elapsedSeconds)) *
           1000
-      
+
         const remainingSeconds =
           remainingMs === Infinity
             ? '∞'
@@ -96,7 +113,7 @@ export class VideoDownloader {
         })
       },
       // stop callback
-      () => stopDownload(),
+      () => stopDownload()
     )
 
     const p = progressCallback({
@@ -111,6 +128,6 @@ export class VideoDownloader {
     })
 
     onComplete()
-    return p;
+    return p
   }
 }

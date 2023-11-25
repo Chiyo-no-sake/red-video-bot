@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "module": "ESNext",
-    "target": "ES2019",	
-    "moduleResolution": "node",
+    "module": "NodeNext",
+    "target": "ESNext",
+    "moduleResolution": "NodeNext",
     "strict": true,
     "noImplicitAny": true,
     "removeComments": true,
@@ -11,14 +11,9 @@
     "esModuleInterop": true,
     "types": []
   },
-  "include": [
-      "src/**/*"
-  ],
-  "exclude": [
-      "**/*.spec.ts",
-      "./node_modules"
-  ],
+  "include": ["src/**/*"],
+  "exclude": ["**/*.spec.ts", "./node_modules"],
   "buildOptions": {
-    "outDir": "dist/src",
-  },
+    "outDir": "dist/src"
+  }
 }
