@@ -14,6 +14,7 @@ WORKDIR /usr/src/app
 
 # Bundle app source
 COPY dist ./dist
+COPY node_modules ./node_modules
 COPY package.json ./
 
 # Run the script
