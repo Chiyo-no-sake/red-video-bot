@@ -1,6 +1,6 @@
 ## Dockerfile to run telegram script with nodeJS 18 lts
 
-FROM node:18.18.0
+FROM node:18.18.0-alpine
 
 ENV TG_API_ID=x
 ENV TG_API_HASH=x
