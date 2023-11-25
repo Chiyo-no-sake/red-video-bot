@@ -14,6 +14,7 @@ WORKDIR /usr/src/app
 
 # Bundle app source
 COPY dist ./dist
+COPY package.json ./
 
 # Run the script
 CMD [ "node", "dist/src/index.js" ]
