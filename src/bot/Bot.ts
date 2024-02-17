@@ -7,8 +7,10 @@ import prettyMilliseconds from 'pretty-ms'
 import { OpenAIGenerator } from '../name-generator/OpenAIGenerator.js'
 import { getAvailableSeries } from '../series_utils.js'
 import { UIService } from '../UIService.js'
-import { VideoInfo } from '../template/Engine.js'
+import { UIVideoInfo } from '../template/Engine.js'
 import { DownloadQueue } from '../download/DownloadQueue.js'
+import { Chat } from 'grammy/types'
+import mime from 'mime-types'
 
 let currentSeriesName: string | undefined = undefined
 let currentSeason: number | undefined = undefined
@@ -17,12 +19,11 @@ export const startBot = async (
   config: RedVideoBotConfig,
   nameGenerator: OpenAIGenerator,
   downloadQueue: DownloadQueue,
-  ui: UIService
+  ui: UIService,
+  bot: Bot,
 ) => {
-  const bot = new Bot(config.auth.botToken)
-
   bot.command('rename', async (ctx) => {
-    renameCommand(ctx, downloadQueue).then(() => (ui.recreate = true))
+    renameCommand(ctx, downloadQueue, ui).then(() => (ui.recreate = true))
   })
 
   bot.command('start', (ctx) => {
@@ -73,11 +74,14 @@ export const startBot = async (
 
   await bot.start({
     drop_pending_updates: true,
+    onStart: () => {
+      downloadQueue.onBotStart();
+    }
   })
 }
 
 async function seriesCommand(
-  ctx: any,
+  ctx: CommandContext<Context>,
   config: RedVideoBotConfig,
   ui: UIService
 ) {
@@ -86,10 +90,11 @@ async function seriesCommand(
     // If text is provided, set the series name to the text
     const seriesDir = config.videoDir + '/tv'
     const series = await getAvailableSeries(seriesDir)
+    const chatId = ctx.msg.chat.id
 
     if (ctx.msg.text === '/series') {
       // if no series name is provided, return the list of series as buttons
-      await ui.sendSeriesPrompt(ctx, series)
+      await ui.sendSeriesPrompt(chatId, series)
     } else {
       // if a series name is provided, set the series name to the text
       currentSeriesName = ctx.msg.text.replace('/series ', '')
@@ -97,11 +102,11 @@ async function seriesCommand(
         fs.mkdirSync(seriesDir + '/' + currentSeriesName)
       }
 
-      await ui.updateMode(ctx, {
+      await ui.updateMode(chatId, {
         mode: 'Series',
         seriesName: currentSeriesName,
       })
-      await ui.clearSeriesPrompt(ctx)
+      await ui.clearSeriesPrompt(chatId)
     }
   } catch (e) {
     console.log(e)
@@ -109,18 +114,19 @@ async function seriesCommand(
   }
 }
 
-async function movieCommand(ctx: any, ui: UIService) {
+async function movieCommand(ctx: CommandContext<Context>, ui: UIService) {
+  const chatId = ctx.msg.chat.id
   try {
     currentSeriesName = undefined
-    await ui.updateMode(ctx, { mode: 'Movie', seriesName: undefined })
-    await ui.clearSeriesPrompt(ctx)
+    await ui.updateMode(chatId, { mode: 'Movie', seriesName: undefined })
+    await ui.clearSeriesPrompt(chatId)
   } catch (e) {
     console.log(e)
     ctx.reply('Error: ' + (e as Error).message)
   }
 }
 
-async function concurrencyCommand(ctx: any, downloadQueue: DownloadQueue) {
+async function concurrencyCommand(ctx: CommandContext<Context>, downloadQueue: DownloadQueue) {
   try {
     const concurrency = parseInt(ctx.msg.text.replace('/concurrency ', ''))
     if (isNaN(concurrency)) {
@@ -136,11 +142,17 @@ async function concurrencyCommand(ctx: any, downloadQueue: DownloadQueue) {
   }
 }
 
-async function buttonsCallback(ctx: any, ui: UIService) {
+async function buttonsCallback(ctx: Context, ui: UIService) {
+  const chatId = ctx.chat?.id;
+  if (!chatId) {
+    ctx.reply('No chat id found');
+    return;
+  }
+
   try {
-    currentSeriesName = ctx.callbackQuery.data
-    await ui.updateMode(ctx, { mode: 'Series', seriesName: currentSeriesName })
-    await ui.clearSeriesPrompt(ctx)
+    currentSeriesName = ctx.callbackQuery!.data
+    await ui.updateMode(chatId, { mode: 'Series', seriesName: currentSeriesName })
+    await ui.clearSeriesPrompt(chatId)
   } catch (e) {
     console.log(e)
     ctx.reply('Error: ' + (e as Error).message)
@@ -152,7 +164,7 @@ async function onReceivedVideo(
   downloadQueue: DownloadQueue,
   nameGenerator: OpenAIGenerator,
   ui: UIService,
-  onStart: (id: string) => void = () => {}
+  onStart: (id: string) => void = () => { }
 ) {
   try {
     if (!ctx.msg?.video?.file_id) return ctx.reply('No file id found!')
@@ -173,7 +185,7 @@ async function onReceivedVideo(
     )
 
     // render info message
-    const videoInfo: VideoInfo = {
+    const videoInfo: UIVideoInfo = {
       fileName: videoName,
       fileSize,
       duration: prettyMilliseconds(ctx.msg.video.duration * 1000, {
@@ -184,11 +196,40 @@ async function onReceivedVideo(
       fileId: ctx.msg.video.file_id,
     }
 
+    if (!ctx.msg?.chat || !ctx.msg?.video || !ctx.msg?.from) {
+      throw new Error('Invalid message')
+    }
+
+    let chatName =
+      (ctx.msg.chat as Chat.GroupChat).title ||
+      (ctx.msg.chat as Chat.PrivateChat).username
+
+    if (!chatName) {
+      console.log('No chat name found')
+      ui.sendError(ctx.msg.chat.id, 'No chat name found')
+    }
+
+    // if the chat of the message is the user for the TelegramService, we need to change it to the bot
+    if (chatName == ctx.msg.from.username || !chatName) chatName = 'RedVideoDL_bot'
+
+    const extension = mime.extension(
+      ctx.msg.video.mime_type || 'application/mp4'
+    )
+
+    const chatId = ctx.msg.chat.id;
+
     // update UI
-    await ui.newFoundVideo(ctx, videoInfo)
+    await ui.newFoundVideo(chatId, videoInfo)
+
+    const ctxInfo = {
+      chatName,
+      msgDateSeconds: ctx.msg.date,
+      fileSize: ctx.msg?.video?.file_size || 0,
+      extension: extension || 'mp4',
+    }
 
     // Download the video
-    downloadQueue.add(ctx, videoInfo, onStart)
+    downloadQueue.add(chatId, videoInfo, ctxInfo, onStart)
   } catch (e) {
     console.log(e)
     await ctx.reply(
@@ -204,7 +245,7 @@ function stopCommand(
 ) {
   try {
     const id = ctx.msg.text.replace('/stop_', '')
-    downloadQueue.stopDownload(ctx, id)
+    downloadQueue.stopDownload(id)
   } catch (e) {
     console.log(e)
     ctx.reply(
@@ -214,11 +255,10 @@ function stopCommand(
 }
 
 async function seasonCommand(ctx: CommandContext<Context>, ui: UIService) {
+  const chatId = ctx.msg.chat.id
   try {
     if (currentSeriesName === undefined) {
-      await ctx.reply(
-        'Movie mode, to set season use first /series <series name>'
-      )
+      await ui.sendError(chatId, 'Movie mode, to set season use first /series <series name>')
       return
     }
 
@@ -226,12 +266,12 @@ async function seasonCommand(ctx: CommandContext<Context>, ui: UIService) {
     const seasonNum = parseInt(season)
 
     if (isNaN(seasonNum)) {
-      await ctx.reply('Invalid season number')
+      await ui.sendError(chatId, 'Invalid season number')
       return
     }
 
     currentSeason = seasonNum
-    await ui.updateMode(ctx, {
+    await ui.updateMode(chatId, {
       mode: 'Series',
       seriesName: currentSeriesName,
       season: seasonNum,
@@ -244,34 +284,36 @@ async function seasonCommand(ctx: CommandContext<Context>, ui: UIService) {
     }
   } catch (e) {
     console.log(e)
-    await ctx.reply('Error: ' + (e as any).message || 'Unknown error')
+    await ui.sendError(chatId, 'Error: ' + (e as any).message || 'Unknown error')
   }
 }
 
 async function renameCommand(
   ctx: CommandContext<Context>,
-  downloadQueue: DownloadQueue
+  downloadQueue: DownloadQueue,
+  ui: UIService
 ) {
+  const chatId = ctx.msg.chat.id;
   try {
     const oldAndNewNames = ctx.msg.text.replace('/rename ', '').split(' ')
     if (oldAndNewNames.length !== 2) {
-      await ctx.reply('Invalid syntax. Use /rename <old name> <new name>')
+      await ui.sendError(chatId, 'Invalid syntax. Use /rename <old name> <new name>')
       return
     }
 
     const done = downloadQueue.renameDownload(
-      ctx,
+      chatId,
       oldAndNewNames[0],
       oldAndNewNames[1]
     )
 
     if (!done) {
-      await ctx.reply('No download found with name ' + oldAndNewNames[0])
+      await ui.sendError(chatId, 'No download found with name ' + oldAndNewNames[0])
     } else {
       await ctx.reply('New name: ' + oldAndNewNames[1])
     }
   } catch (e) {
     console.log(e)
-    await ctx.reply('Error: ' + (e as Error).message)
+    await ui.sendError(chatId, 'Error: ' + (e as any).message || 'Unknown error')
   }
 }

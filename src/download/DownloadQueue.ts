@@ -1,24 +1,18 @@
 import { Context } from 'grammy'
 import { VideoDownloader } from './VideoDownloader.js'
 import {
-  ProgressInfo,
+  UIProgressInfo,
   ProgressInfoMultiple,
-  VideoInfo,
+  UIVideoInfo,
 } from '../template/Engine.js'
 import { randomUUID } from 'crypto'
 import { UIService } from '../UIService.js'
 import prettyBytes from 'pretty-bytes'
 import prettyMilliseconds from 'pretty-ms'
 import { toBase64 } from 'openai/core.js'
+import { DownloadJob, DownloadMetadataService } from './DownloadMetadataService.js'
+import bigInt from 'big-integer'
 
-export type DownloadJob = {
-  ctx: Context
-  videoInfo: VideoInfo
-  id: string
-  progressInfo?: ProgressInfo
-  stopped?: boolean
-  onStart: (id: string) => void
-}
 
 export class DownloadQueue {
   private queue: DownloadJob[] = []
@@ -29,36 +23,72 @@ export class DownloadQueue {
 
   constructor(
     private readonly videoDownloader: VideoDownloader,
+    private readonly metadataService: DownloadMetadataService,
     private readonly ui: UIService
-  ) {}
+  ) { }
 
-  add(
-    ctx: Context,
-    videoInfo: VideoInfo,
+  async onBotStart() {
+    // list all resumable downloads
+    // and sort them by queue position: first the items without queue position, then the ones with queue position in ascending order
+    const resumable = (await Promise.all((await this.metadataService.listDownloadKeys()).map(async (id) => (await this.metadataService.getDownloadStatus(id))!)))
+      .sort((a, b) => {
+        if (a.queuePosition && b.queuePosition) {
+          return a.queuePosition - b.queuePosition
+        } else if (a.queuePosition) {
+          return 1
+        } else if (b.queuePosition) {
+          return -1
+        } else {
+          return 0
+        }
+      });
+
+    for (const r of resumable) {
+      if (r.queuePosition) {
+        this.queue.push(r)
+      } else {
+        this.resumeDownload(r)
+      }
+    }
+  }
+
+  async add(
+    chatId: string | number,
+    videoInfo: UIVideoInfo,
+    ctxInfo: { chatName: string, msgDateSeconds: number, fileSize: number, extension: string },
     onStart: (id: string) => void
-  ): string {
-    const job = {
-      ctx: ctx,
+  ): Promise<string> {
+    const job: DownloadJob = {
+      chatId,
       videoInfo: videoInfo,
+      ctxInfo,
       id: toBase64(randomUUID()).substring(0, 6),
       stopped: false,
       onStart,
+      offset: bigInt(0),
     }
-    this.queue.push(job)
+
+    const idx = this.queue.push(job);
+    job.queuePosition = idx;
+
+    // save the download status to the metadata service (for resuming)
+    await this.metadataService.saveDownloadStatus(job.id, job).catch((e) => {
+      console.log(e)
+      this.ui.sendError(chatId, 'Error saving download status: ' + (e as any).message || 'Unknown error')
+    });
+
 
     if (this.downloading.length < this.maxConcurrentDownloads) {
       this.downloadNext().catch((e) => {
         console.log(e)
-        ctx.reply(
-          'Error downloading video: ' + (e as any).message || 'Unknown error'
-        )
-      })
+        this.ui.sendError(chatId, 'Error downloading video: ' + (e as any).message || 'Unknown error')
+      });
     }
 
-    return job.id
+    return job.id;
   }
 
-  stopDownload(ctx: Context, id: string) {
+  async stopDownload(id: string) {
     const job =
       this.downloading.find((j) => j.id == id) ||
       this.queue.find((j) => j.id == id)
@@ -71,6 +101,7 @@ export class DownloadQueue {
       job.stopped = true
     } else {
       this.queue = this.queue.filter((j) => j.id != id)
+      await this.metadataService.deleteDownloadStatus(id)
     }
   }
 
@@ -93,13 +124,14 @@ export class DownloadQueue {
     }
   }
 
-  renameDownload(ctx: Context, oldName: string, newName: string) {
+  async renameDownload(chatId: string | number, oldName: string, newName: string) {
     const job = this.queue.find((j) => j.videoInfo.fileName == oldName)
     if (job) {
       job.videoInfo.fileName = newName
+      await this.metadataService.saveDownloadStatus(job.id, job)
       return true
     } else {
-      ctx.reply('Could not find video to rename')
+      await this.ui.sendError(chatId, 'Could not find video to rename')
       return false
     }
   }
@@ -110,23 +142,43 @@ export class DownloadQueue {
     }
 
     const job = this.queue.shift()!
+    job.queuePosition = undefined
+
+    // update the queue positions
+    this.queue = this.queue.map((j) => {
+      j.queuePosition = j.queuePosition! - 1
+      return j
+    });
+
+    // save the new queue positions
+    for (const j of this.queue) {
+      await this.metadataService.saveDownloadStatus(j.id, j)
+    }
+
+    // save the started download status
+    await this.metadataService.saveDownloadStatus(job.id, job)
+
     this.downloading.push(job)
-    job.onStart(job.id)
+    job.onStart?.(job.id)
+
     this.videoDownloader.startDownload(
-      job.ctx,
-      job.id,
-      job.videoInfo,
+      job,
       // on progress
-      (progress) => {
-        job.progressInfo = progress
-        return this.ui.updateProgress(job.ctx, this.getProgressStatus())
+      async (newJob) => {
+        // update the job in the downloading array
+        const idx = this.downloading.findIndex((j) => j.id == newJob.id)
+        this.downloading[idx] = newJob;
+
+        await this.metadataService.saveDownloadStatus(newJob.id, newJob)
+        return this.ui.updateProgress(newJob.chatId, this.getProgressStatus())
       },
       // get stop status
       async () => {
         const stop = job.stopped
         if (stop) {
           this.downloading = this.downloading.filter((j) => j.id != job.id)
-          await this.ui.updateProgress(job.ctx, this.getProgressStatus())
+          await this.metadataService.deleteDownloadStatus(job.id)
+          await this.ui.updateProgress(job.chatId, this.getProgressStatus())
         }
 
         return !!stop
@@ -134,18 +186,54 @@ export class DownloadQueue {
       // on complete
       async () => {
         this.downloading = this.downloading.filter((j) => j.id != job.id)
-        await this.ui.updateProgress(job.ctx, this.getProgressStatus())
+        await this.metadataService.deleteDownloadStatus(job.id)
+        await this.ui.updateProgress(job.chatId, this.getProgressStatus())
         return this.downloadNext().catch((e) => {
           console.log(e)
-          job.ctx.reply(
-            'Error downloading video: ' + (e as any).message || 'Unknown error'
-          )
+          this.ui.sendError(job.chatId, 'Error downloading video: ' + (e as any).message || 'Unknown error')
         })
       }
     )
   }
 
-  private getProgressStatus(): ProgressInfo | ProgressInfoMultiple | undefined {
+  private async resumeDownload(job: DownloadJob) {
+    this.downloading.push(job)
+    this.videoDownloader.resumeDownload(
+      job,
+      // on progress
+      async (newJob) => {
+        // update the job in the downloading array
+        const idx = this.downloading.findIndex((j) => j.id == newJob.id)
+        this.downloading[idx] = newJob;
+
+        await this.metadataService.saveDownloadStatus(newJob.id, newJob)
+        return this.ui.updateProgress(newJob.chatId, this.getProgressStatus())
+      },
+      // get stop status
+      async () => {
+        const stop = job.stopped
+        if (stop) {
+          this.downloading = this.downloading.filter((j) => j.id != job.id)
+          await this.metadataService.deleteDownloadStatus(job.id)
+          await this.ui.updateProgress(job.chatId, this.getProgressStatus())
+        }
+
+        return !!stop
+      },
+      // on complete
+      async () => {
+        this.downloading = this.downloading.filter((j) => j.id != job.id)
+        await this.metadataService.deleteDownloadStatus(job.id)
+        await this.ui.updateProgress(job.chatId, this.getProgressStatus())
+        return this.downloadNext().catch((e) => {
+          console.log(e)
+          this.ui.sendError(job.chatId, 'Error downloading video: ' + (e as any).message || 'Unknown error')
+        })
+      }
+    )
+  }
+
+  private getProgressStatus(): UIProgressInfo | ProgressInfoMultiple | undefined {
     if (this.queue.length > 0 || this.downloading.length > 1) {
       return {
         queue: this.queue.map((job) => {

@@ -1,11 +1,9 @@
-import { Context } from 'grammy'
-import mime from 'mime-types'
 import fs from 'fs'
-import { Chat } from 'grammy/types'
-import { ProgressInfo, VideoInfo } from '../template/Engine.js'
 import TelegramService from '../tg-client/TelegramService.js'
 import prettyBytes from 'pretty-bytes'
 import prettyMilliseconds from 'pretty-ms'
+import bigInt, { BigInteger } from 'big-integer'
+import { DownloadJob } from './DownloadMetadataService.js'
 
 export type VideoDownloaderConfig = {
   videoDir: string
@@ -14,57 +12,121 @@ export type VideoDownloaderConfig = {
 export class VideoDownloader {
   constructor(
     private readonly config: VideoDownloaderConfig,
-    private readonly tg: TelegramService
-  ) {}
+    private readonly tg: TelegramService,
+  ) { }
 
   startDownload(
-    ctx: Context,
-    id: string,
-    videoInfo: VideoInfo,
-    progressCallback: (info: ProgressInfo) => void,
+    job: DownloadJob,
+    progressCallback: (job: DownloadJob) => void,
     stopDownload: () => Promise<boolean> | boolean,
-    onComplete: () => void
+    onComplete: () => void,
   ) {
     return this.download(
-      ctx,
-      videoInfo,
-      id,
+      job,
       progressCallback,
       onComplete,
       stopDownload
     )
   }
 
+  resumeDownload(
+    job: DownloadJob,
+    progressCallback: (job: DownloadJob) => void,
+    stopDownload: () => Promise<boolean> | boolean,
+    onComplete: () => void
+  ) {
+    return this.resume(
+      job,
+      progressCallback,
+      stopDownload,
+      onComplete
+    )
+  }
+
+  private async resume(
+    job: DownloadJob,
+    progressCallback: (job: DownloadJob) => void,
+    stopDownload: () => Promise<boolean> | boolean,
+    onComplete: () => void
+  ) {
+    const startTime = Date.now()
+    let startOffset = job.offset
+
+    this.progressCallback(
+      job,
+      startTime,
+      job.offset,
+      bigInt.zero,
+      bigInt(job.ctxInfo.fileSize),
+      job.videoInfo.fileName,
+      job.videoInfo.seriesName,
+      progressCallback
+    )
+
+    const [message, dlPromise] = await this.tg.downloadMediaFromMessage({
+      chatName: job.ctxInfo.chatName,
+      msgDateSeconds: job.ctxInfo.msgDateSeconds,
+      fileSize: job.ctxInfo.fileSize,
+    },
+      job.filePath!,
+      async (progress, total) => {
+        // the progress made only in this try (from when the download resumed)
+        // is equal to the current progress minus the offset when the download resumed
+        job.offset = progress;
+        const currentProgress = progress.minus(startOffset);
+        return await this.progressCallback(
+          job,
+          startTime,
+          progress,
+          currentProgress,
+          total,
+          job.videoInfo.fileName,
+          job.videoInfo.seriesName,
+          progressCallback
+        );
+      },
+      // stop callback, to check if the download should be stopped and delete the metadata
+      async () => {
+        return await stopDownload()
+      },
+      job.offset
+    );
+
+    // wait for the download to finish
+    await dlPromise;
+
+    // Update the progress to 100% and the speed to 0
+    job.offset = bigInt(job.ctxInfo.fileSize);
+    await this.progressCallback(
+      job,
+      startTime,
+      bigInt(job.ctxInfo.fileSize),
+      bigInt(job.ctxInfo.fileSize),
+      bigInt(job.ctxInfo.fileSize),
+      job.videoInfo.fileName,
+      job.videoInfo.seriesName,
+      progressCallback
+    );
+
+    onComplete();
+  }
+
   // blocking
   private async download(
-    ctx: Context,
-    videoInfo: VideoInfo,
-    dlId: string,
-    progressCallback: (info: ProgressInfo) => void,
+    job: DownloadJob,
+    progressCallback: (job: DownloadJob) => void,
     onComplete: () => void,
-    stopDownload: () => Promise<boolean> | boolean
+    stopDownload: () => Promise<boolean> | boolean,
   ) {
     const start = Date.now()
-    if (!ctx.msg?.chat || !ctx.msg?.video || !ctx.msg?.from) {
-      throw new Error('Invalid message')
-    }
-
-    let chatName =
-      (ctx.msg.chat as Chat.GroupChat).title ||
-      (ctx.msg.chat as Chat.PrivateChat).username
-
-    // if the chat of the message is the user for the TelegramService, we need to change it to the bot
-    if (chatName == ctx.msg.from.username) chatName = 'RedVideoDL_bot'
-
-    const extension = mime.extension(
-      ctx.msg.video.mime_type || 'application/mp4'
-    )
-    const finalName = `${videoInfo.fileName}.${extension}`
+    const finalName = `${job.videoInfo.fileName}.${job.ctxInfo.extension}`
     const finalPath =
       this.config.videoDir +
       '/' +
-      (videoInfo.isSeries ? 'tv/' + videoInfo.seriesName + '/' : 'movies/') +
+      (job.videoInfo.isSeries ? 'tv/' + job.videoInfo.seriesName + '/' : 'movies/') +
       finalName
+
+    job.filePath = finalPath;
 
     // Create all necessary directories, if they don't exist
     const dir = finalPath.split('/')
@@ -74,61 +136,108 @@ export class VideoDownloader {
       fs.mkdirSync(dirPath, { recursive: true })
     }
 
-    const messageDate = ctx.msg.date
-    await this.tg.downloadMediaFromMessage(
-      {
-        chatName: chatName,
-        msgDateSeconds: messageDate,
-        fileSize: ctx.message?.video?.file_size || 0,
-      },
-      finalPath,
-      // progress callback
-      async (progress, total) => {
-        const elapsedSeconds = (Date.now() - start) / 1000
-        const speed = prettyBytes(progress.toJSNumber() / elapsedSeconds) + '/s'
-
-        const progressPercentage = progress
-          .multiply(100)
-          .divide(total)
-          .toJSNumber()
-
-        const remainingMs =
-          ((total.toJSNumber() - progress.toJSNumber()) /
-            (progress.toJSNumber() / elapsedSeconds)) *
-          1000
-
-        const remainingSeconds =
-          remainingMs === Infinity
-            ? '∞'
-            : prettyMilliseconds(remainingMs, { secondsDecimalDigits: 0 })
-
-        return progressCallback({
-          progressPercentage,
-          fileName: finalName,
-          progress: prettyBytes(progress.toJSNumber()),
-          total: prettyBytes(total.toJSNumber()),
-          timeLeft: remainingSeconds,
-          speed,
-          id: dlId,
-          seriesName: videoInfo.seriesName,
-        })
-      },
-      // stop callback
-      () => stopDownload()
+    await this.progressCallback(
+      job,
+      start,
+      bigInt.zero,
+      bigInt.zero,
+      bigInt(job.ctxInfo.fileSize),
+      finalName,
+      job.videoInfo.seriesName,
+      progressCallback
     )
 
-    const p = progressCallback({
-      fileName: finalName,
-      progressPercentage: 100,
-      progress: videoInfo.fileSize,
-      total: videoInfo.fileSize,
-      speed: prettyBytes(0) + '/s',
-      timeLeft: prettyMilliseconds(0),
-      seriesName: videoInfo.seriesName,
-      id: dlId,
-    })
+    // Start the download, and get the message and the promise to download the file
+    const [message, dlPromise] = await this.tg.downloadMediaFromMessage(
+      {
+        chatName: job.ctxInfo.chatName,
+        msgDateSeconds: job.ctxInfo.msgDateSeconds,
+        fileSize: job.ctxInfo.fileSize,
+      },
+      finalPath,
+      async (progress, total) => {
+        job.offset = progress;
 
-    onComplete()
-    return p
+        return await this.progressCallback(
+          job,
+          start,
+          progress,
+          progress,
+          total,
+          finalName,
+          job.videoInfo.seriesName,
+          progressCallback
+        );
+      },
+      // stop callback, to check if the download should be stopped
+      async () => {
+        return await stopDownload()
+      }
+    )
+
+    await dlPromise;
+
+    // Update the progress to 100% and the speed to 0
+    job.offset = bigInt(job.ctxInfo.fileSize);
+    await this.progressCallback(
+      job,
+      start,
+      bigInt(job.ctxInfo.fileSize),
+      bigInt(job.ctxInfo.fileSize),
+      bigInt(job.ctxInfo.fileSize),
+      finalName,
+      job.videoInfo.seriesName,
+      progressCallback
+    );
+
+    onComplete();
+  }
+
+  /**
+   * 
+   * @param job The download job
+   * @param start The time when the download started, or resumed
+   * @param totalProgress The total progress of the download
+   * @param currentTryProgress The progress of the download made since it has resumed
+   * @param total The total size of the file
+   * @param finalName the name of the file
+   * @param seriesName the name of the series, if the file is part of a series
+   * @param progressCallback callback to update the progress to clients
+   */
+  private async progressCallback(job: DownloadJob, start: number, totalProgress: BigInteger, currentTryProgress: BigInteger, total: BigInteger, finalName: string, seriesName: string | undefined, progressCallback: (job: DownloadJob) => void,) {
+    const elapsedSeconds = (Date.now() - start) / 1000;
+
+    const remaining = total.subtract(totalProgress);
+
+    const progressPercentage = totalProgress
+      .multiply(100)
+      .divide(total)
+      .toJSNumber()
+
+    const speed = prettyBytes(
+      elapsedSeconds === 0
+        ? 0
+        : (currentTryProgress.toJSNumber() / elapsedSeconds)
+    ) + '/s';
+
+    const remainingMs = elapsedSeconds === 0 ? Infinity : remaining.toJSNumber() / (currentTryProgress.toJSNumber() / elapsedSeconds) * 1000;
+
+    const remainingSeconds =
+      remainingMs === Infinity
+        ? '∞'
+        : prettyMilliseconds(remainingMs, { secondsDecimalDigits: 0 })
+
+    job.progressInfo = {
+      fileName: finalName,
+      progressPercentage,
+      progress: prettyBytes(totalProgress.toJSNumber()),
+      total: prettyBytes(total.toJSNumber()),
+      speed,
+      timeLeft: remainingSeconds,
+      seriesName,
+      id: job.id,
+    }
+
+    return progressCallback(job)
   }
 }

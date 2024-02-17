@@ -1,5 +1,5 @@
-import { Engine, ModeInfo, ProgressInfo, ProgressInfoMultiple, VideoInfo } from "./template/Engine.js";
-import { Context, InlineKeyboard } from "grammy";
+import { Engine, ModeInfo, UIProgressInfo, ProgressInfoMultiple, UIVideoInfo } from "./template/Engine.js";
+import { Context, InlineKeyboard, Bot } from "grammy";
 import { delay } from "./utils.js";
 
 export class UIService {
@@ -25,28 +25,29 @@ export class UIService {
 
   constructor(
     private readonly templateEngine: Engine,
+    private readonly bot: Bot
   ) {
-    this.modeMsgTxt = this.templateEngine.renderCurrentMode({mode: 'Movie', seriesName: undefined})
+    this.modeMsgTxt = this.templateEngine.renderCurrentMode({ mode: 'Movie', seriesName: undefined })
   }
 
-  async newFoundVideo(ctx: Context, videoInfo: VideoInfo) {
+  async newFoundVideo(chatId: string | number, videoInfo: UIVideoInfo) {
     const infoText = this.templateEngine.renderVideoInfo(videoInfo)
     this.videoInfoMsgTxt = infoText
 
-    await this._replyWithUpdates(ctx)
+    await this._replyWithUpdates(chatId)
   }
 
-  async updateMode(ctx: Context, modeInfo: {mode: 'Movie' | 'Series', seriesName?: string, season?: number}) {
-    const modeText = this.templateEngine.renderCurrentMode({...this.currentModeInfo!, ...modeInfo})
+  async updateMode(chatId: string | number, modeInfo: { mode: 'Movie' | 'Series', seriesName?: string, season?: number }) {
+    const modeText = this.templateEngine.renderCurrentMode({ ...this.currentModeInfo!, ...modeInfo })
     this.modeMsgTxt = modeText
 
-    await this._replyWithUpdates(ctx)
+    await this._replyWithUpdates(chatId)
   }
 
-  async updateProgress(ctx: Context, progressInfo: ProgressInfo | ProgressInfoMultiple | undefined) {
+  async updateProgress(chatId: string | number, progressInfo: UIProgressInfo | ProgressInfoMultiple | undefined) {
     if (!progressInfo) {
       this.progressMsgTxt = undefined
-      await this._replyWithUpdates(ctx)
+      await this._replyWithUpdates(chatId)
       return
     }
 
@@ -63,10 +64,10 @@ export class UIService {
       this.progressMsgTxt = this.templateEngine.renderProgressInfo(progressInfo)
     }
 
-    await this._replyWithUpdates(ctx)
+    await this._replyWithUpdates(chatId)
   }
 
-  async sendSeriesPrompt(ctx: Context, series: string[]) {
+  async sendSeriesPrompt(chatId: number | string, series: string[]) {
     const buttons = series.map((seriesName) => {
       return {
         text: seriesName,
@@ -75,14 +76,15 @@ export class UIService {
     })
 
     const inlineKeyboard = new InlineKeyboard()
-  
+
     for (const button of buttons) {
       inlineKeyboard
         .text(button.text, button.callback_data)
         .row()
     }
 
-    await ctx.reply(
+    await this.bot.api.sendMessage(
+      chatId,
       'Choose a series, or call again <code>/series NewName</code> to create and/or set a series',
       {
         reply_markup: inlineKeyboard,
@@ -93,43 +95,48 @@ export class UIService {
     })
   }
 
-  async clearSeriesPrompt(ctx: Context) {
-    if(!ctx.chat?.id) {
+  async clearSeriesPrompt(chatId: string | number | undefined) {
+    if (!chatId) {
       throw new Error('Cannot clear message: No chat id')
     }
 
     if (this.seriesPromptMessageId) {
-      await ctx.api.deleteMessage(ctx.chat?.id, this.seriesPromptMessageId)
+      await this.bot.api.deleteMessage(chatId, this.seriesPromptMessageId)
         .catch(e => console.log('could not delete message: ', e))
       this.seriesPromptMessageId = undefined
     }
   }
 
-  private async _replyWithUpdates(ctx: Context) {
-    if(!ctx.chat?.id) {
+  async sendError(chatId: string | number, error: string) {
+    await this.bot.api.sendMessage(chatId, error)
+  }
+
+  private async _replyWithUpdates(chatId: string | number | undefined) {
+    if (!chatId) {
       throw new Error('Cannot update message: No chat id')
     }
-  
+
     let text = this.modeMsgTxt
     text += this.videoInfoMsgTxt ? '\n\n' + this.videoInfoMsgTxt : ''
     text += this.progressMsgTxt ? '\n\n' + this.progressMsgTxt : ''
 
-    if(text === this.lastSentText) {
+    if (text === this.lastSentText) {
       return
     }
 
     if (this.messageId && !this.recreate) {
-      await ctx.api.editMessageText(ctx.chat?.id, this.messageId, text, {parse_mode: 'HTML'})
+      await this.bot.api.editMessageText(chatId, this.messageId, text, { parse_mode: 'HTML' })
     }
     else if (this.messageId && this.recreate) {
-      await ctx.api.deleteMessage(ctx.chat?.id, this.messageId)
+      await this.bot.api.deleteMessage(chatId, this.messageId)
         .catch(e => console.log('could not delete message: ', e))
+
       this.messageId = undefined
       await delay(1000)
-      const msg = await ctx.reply(text, {parse_mode: 'HTML'})
+      const msg = await this.bot.api.sendMessage(chatId, text, { parse_mode: 'HTML' })
       this.messageId = msg.message_id
     } else {
-      await ctx.reply(text, {parse_mode: 'HTML'}).then((msg) => {
+      await this.bot.api.sendMessage(chatId, text, { parse_mode: 'HTML' }).then((msg) => {
         this.messageId = msg.message_id
       })
     }

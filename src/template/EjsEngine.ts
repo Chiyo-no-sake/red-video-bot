@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs'
-import { Engine, ModeInfo, OpenAIPromptInfo, ProgressInfo, ProgressInfoMultiple, VideoInfo } from './Engine.js'
+import { Engine, ModeInfo, OpenAIPromptInfo, UIProgressInfo, ProgressInfoMultiple, UIVideoInfo } from './Engine.js'
 import { fileURLToPath } from 'url'
 import path from 'path'
 import { render } from 'ejs'
@@ -25,7 +25,7 @@ export default class EjsEngine implements Engine {
       modePath,
       'utf-8'
     )
-    
+
     this.progressTemplate = readFileSync(
       progressPath,
       'utf-8'
@@ -57,7 +57,7 @@ export default class EjsEngine implements Engine {
     return render(this.modeTemplate, modeInfoObj)
   }
 
-  renderVideoInfo(videoInfo: VideoInfo): string {
+  renderVideoInfo(videoInfo: UIVideoInfo): string {
     const videoInfoObj = {
       fileName: videoInfo.fileName,
       fileSize: videoInfo.fileSize,
@@ -70,7 +70,7 @@ export default class EjsEngine implements Engine {
     return render(this.videoTemplate, videoInfoObj)
   }
 
-  renderProgressInfo(progressInfo: ProgressInfo): string {
+  renderProgressInfo(progressInfo: UIProgressInfo): string {
     const progressInfoObj = {
       fileName: progressInfo.fileName,
       progressPercentage: progressInfo.progressPercentage,

@@ -72,12 +72,15 @@ export function getThumb(
   }
 }
 
-export function getWriter(outputFile?: OutFile) {
+export function getWriter(outputFile?: OutFile, startOffset?: number) {
   if (!outputFile || Buffer.isBuffer(outputFile)) {
     return new BinaryWriter(Buffer.alloc(0))
   } else if (typeof outputFile == 'string') {
     // We want to make sure that the path exists.
-    return createWriteStream(outputFile)
+    return createWriteStream(outputFile, {
+      start: startOffset,
+      flags: startOffset ? 'r+' : 'w',
+    });
   } else {
     return outputFile
   }

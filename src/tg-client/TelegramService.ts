@@ -59,12 +59,13 @@ export default class TelegramService {
     mediaData: { chatName?: string; msgDateSeconds: number, fileSize: number },
     outputFile: string,
     progressCallback?: (progress: BigInteger, total: BigInteger) => void,
-    stopDownload?: () => boolean | Promise<boolean>
-  ) {
+    stopDownload?: () => boolean | Promise<boolean>,
+    offset: BigInteger = bigInt(0),
+  ): Promise<[Api.Message, Promise<Buffer | string | undefined>]> {
     delay(500)
     const chatEntity = await this.client.getEntity(mediaData.chatName!)
-    const messages = await this.client?.getMessages(chatEntity)
-    const message = messages.find(
+    const messages = (await this.client?.getMessages(chatEntity, { limit: 30 })).filter(m => !!m.media)
+    let message = messages.find(
       (msg) => {
         const sameDate = msg.date === mediaData.msgDateSeconds && !!msg.media
 
@@ -75,18 +76,27 @@ export default class TelegramService {
     await delay(500)
 
     if (!message) {
-      throw new Error('Message not found. Maybe you deleted the message?')
+      // throw new Error('Message not found. Maybe you deleted the message?')
+
+      // instead of throwing an error, find the message, in the array of messages above, that is closest to the date provided
+      message = messages.reduce((prev, curr) => {
+        if (Math.abs(curr.date - mediaData.msgDateSeconds) < Math.abs(prev.date - mediaData.msgDateSeconds)) {
+          return curr
+        }
+        return prev
+      })
     }
 
     console.log('Downloading video...')
-    await this.stoppableDownloadMedia(
+    return [message, this.stoppableDownloadMedia(
       this.client,
       message,
       outputFile,
       undefined,
       progressCallback,
-      stopDownload
-    )
+      stopDownload,
+      offset
+    )]
   }
 
   // Adapted from the library to iterate the download so it can be stopped
@@ -96,7 +106,8 @@ export default class TelegramService {
     outputFile?: OutFile,
     thumb?: number | Api.TypePhotoSize,
     progressCallback?: ProgressCallback,
-    stopDownload?: () => boolean | Promise<boolean>
+    stopDownload?: () => boolean | Promise<boolean>,
+    offset: BigInteger = bigInt(0),
   ): Promise<Buffer | string | undefined> {
     /*
         Downloading large documents may be slow enough to require a new file reference
@@ -130,7 +141,8 @@ export default class TelegramService {
         thumb,
         progressCallback,
         msgData,
-        stopDownload
+        stopDownload,
+        offset
       )
     } else {
       throw new Error('This media is not a video. It cannot be downloaded.')
@@ -146,7 +158,8 @@ export default class TelegramService {
     thumb?: number | string | Api.TypePhotoSize,
     progressCallback?: ProgressCallback,
     msgData?: [EntityLike, number],
-    stopDownload?: () => boolean | Promise<boolean>
+    stopDownload?: () => boolean | Promise<boolean>,
+    offset: BigInteger = bigInt(0)
   ): Promise<Buffer | string | undefined> {
     if (doc instanceof Api.MessageMediaDocument) {
       if (!doc.document) {
@@ -185,10 +198,11 @@ export default class TelegramService {
         thumbSize: size && 'type' in size ? size.type : '',
       }),
       {
-        outputFile: outputFile,
+        offset,
+        msgData,
+        outputFile,
         fileSize: size && 'size' in size ? bigInt(size.size) : doc.size,
         progressCallback: progressCallback,
-        msgData: msgData,
       },
       stopDownload
     )
@@ -204,7 +218,8 @@ export default class TelegramService {
       progressCallback = undefined,
       dcId = undefined,
       msgData = undefined,
-    }: DownloadFileParamsV2,
+      offset = bigInt.zero,
+    }: DownloadFileParamsRedVideoV1,
     stopDownload?: () => boolean | Promise<boolean>
   ) {
     if (!partSizeKb) {
@@ -220,15 +235,17 @@ export default class TelegramService {
       throw new Error('The part size must be evenly divisible by 4096')
     }
 
-    const writer = getWriter(outputFile)
+    const writer = getWriter(outputFile, offset.toJSNumber());
 
-    let downloaded = bigInt.zero
+    let downloaded = offset;
+    let startFrom = offset;
     try {
       for await (const chunk of iterDownload(client, {
         file: inputLocation,
         requestSize: partSize,
         dcId: dcId,
         msgData: msgData,
+        offset: startFrom,
       })) {
         await writer.write(chunk)
         if (progressCallback) {
@@ -245,3 +262,5 @@ export default class TelegramService {
     }
   }
 }
+
+export type DownloadFileParamsRedVideoV1 = DownloadFileParamsV2 & { offset?: BigInteger }

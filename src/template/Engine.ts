@@ -1,4 +1,4 @@
-export type VideoInfo = {
+export type UIVideoInfo = {
   fileName: string
   fileSize: string
   duration: string
@@ -13,7 +13,7 @@ export type ModeInfo = {
   season?: number
 }
 
-export type ProgressInfo = {
+export type UIProgressInfo = {
   fileName: string
   progressPercentage: number
   progress: string
@@ -25,8 +25,8 @@ export type ProgressInfo = {
 }
 
 export type ProgressInfoMultiple = {
-  queue: {fileName: string, total: string, seriesName: string | undefined, id: string}[],
-  downloading: ProgressInfo[],
+  queue: { fileName: string, total: string, seriesName: string | undefined, id: string }[],
+  downloading: UIProgressInfo[],
 }
 
 export type OpenAIPromptInfo = {
@@ -37,8 +37,8 @@ export type OpenAIPromptInfo = {
 
 export interface Engine {
   renderCurrentMode(modeInfo: ModeInfo): string
-  renderVideoInfo(videoInfo: VideoInfo): string
-  renderProgressInfo(progressInfo: ProgressInfo): string
+  renderVideoInfo(videoInfo: UIVideoInfo): string
+  renderProgressInfo(progressInfo: UIProgressInfo): string
   renderMultipleProgressInfo(progressInfo: ProgressInfoMultiple): string
   renderOpenAIPrompt(promptInfo: OpenAIPromptInfo): string
 }
